@@ -2,14 +2,101 @@
 <html>
 <head>
     <title>Taverna-Fernando - Login</title>
-    <style>body { font-family: sans-serif; display: flex; justify-content: center; margin-top: 100px; background: #f4f4f4; }</style>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0047AB 0%, #1E90FF 100%);
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 71, 171, 0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo-section img {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+            object-fit: contain;
+        }
+        h2 {
+            color: #0047AB;
+            font-size: 24px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        input:focus {
+            outline: none;
+            border-color: #0047AB;
+            box-shadow: 0 0 8px rgba(0, 71, 171, 0.2);
+        }
+        input::placeholder {
+            color: #999;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #0047AB 0%, #1E90FF 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 71, 171, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+    </style>
 </head>
 <body>
-    <form action="/login" method="POST" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-        <h2>🥪 Taverna Fernando Login</h2>
-        <input type="text" name="username" placeholder="Usuário" required><br><br>
-        <input type="password" name="password" placeholder="Senha" required><br><br>
-        <button type="submit">Entrar</button>
-    </form>
+    <div class="login-container">
+        <div class="logo-section">
+            <img src="https://www.tradework.com.br/media/catalog/product/cache/cd63a08b966d107aaaf66bd74393e948/r/e/red_hat_logo_big.jpg" alt="Red Hat Logo">
+            <h2>Taverna Fernando Login</h2>
+        </div>
+        <form action="/login" method="POST">
+            <div class="form-group">
+                <input type="text" name="username" placeholder="Usuário" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Senha" required>
+            </div>
+            <button type="submit">Entrar</button>
+        </form>
+    </div>
 </body>
 </html>
