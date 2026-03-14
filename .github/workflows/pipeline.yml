@@ -16,6 +16,7 @@ on:
 
 jobs:
 
+
   estagio_build:
 
     runs-on: ubuntu-latest
@@ -44,6 +45,7 @@ jobs:
       - name: Verificar sintaxe do projeto
 
         run: node --check index.js
+
 
 
   estagio_lint:
@@ -78,7 +80,7 @@ jobs:
         run: npm install
 
 
-      - name: Instalar globals para o ESLint
+      - name: Instalar globals para ESLint
 
         run: npm install --no-save globals
 
@@ -136,6 +138,37 @@ jobs:
         run: npx eslint .
 
 
-      - name: Rodar build
 
-        run: node --check index.js
+  job_sonar:
+
+    needs: estagio_lint
+
+    runs-on: ubuntu-latest
+
+
+    steps:
+
+      - name: Checkout do código
+
+        uses: actions/checkout@v4
+
+
+      - name: SonarQube Scan
+
+        uses: sonarsource/sonarqube-scan-action@master
+
+        env:
+
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+        with:
+
+          args: >
+
+            -Dsonar.projectKey=taverna-fernando
+
+            -Dsonar.projectName="taverna-fernando"
+
+            -Dsonar.sources=.
