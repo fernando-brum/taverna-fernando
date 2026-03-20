@@ -15,15 +15,15 @@ const dbConfig = {
 let pool;
 
 async function connectWithRetry() {
-    console.log('🔍 [INFRA] Tentando conectar ao MySQL...');
+    console.log('[>>>] [INFRA] Tentando conectar ao MySQL...');
     for (let i = 1; i <= 10; i++) {
         try {
             pool = mysql.createPool(dbConfig);
             await pool.query('SELECT 1');
-            console.log('✅ [DATABASE] Conectado ao MySQL com sucesso!');
+            console.log('[+] [DATABASE] Conectado ao MySQL com sucesso!');
             return;
         } catch (err) {
-            console.log(`⚠️ [DATABASE] Tentativa ${i}/10 falhou. Aguardando...`);
+            console.log(`[!] [DATABASE] Tentativa ${i}/10 falhou. Aguardando...`);
             await new Promise(res => setTimeout(res, 3000));
         }
     }
@@ -54,5 +54,5 @@ app.get('/dashboard', async (req, res) => {
 });
 
 connectWithRetry().then(() => {
-    app.listen(3000, () => console.log('🚀 MARMITATECH PRO ONLINE NA PORTA 3000'));
+    app.listen(3000, () => console.log('[*] MARMITATECH PRO ONLINE NA PORTA 3000'));
 });
