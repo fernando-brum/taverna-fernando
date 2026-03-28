@@ -9,10 +9,10 @@ WORKDIR /app
 # Copia os arquivos de dependência primeiro para aproveitar o cache de camadas do Docker
 COPY package*.json ./
 
-# Usa 'npm ci' no lugar de 'npm install' (mais rápido e determinístico)
-# --omit=dev garante que dependências de desenvolvimento (ex: Jest, Nodemon) não sejam instaladas
+# Usa 'npm install' já que o package-lock.json não está presente
+# --omit=dev garante que dependências de desenvolvimento não sejam instaladas
 # Limpa o cache do npm na mesma camada para economizar espaço
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copia o restante do código para o container
 COPY . .
