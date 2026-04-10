@@ -1,27 +1,36 @@
-# Usa a versão Alpine (muito mais leve)
-FROM node:18-alpine
+# ---------------------------------------------------
+# Estágio 1: Builder (Prepara as dependências)
+# ---------------------------------------------------
+    FROM node:18-alpine AS builder
 
-# Define o ambiente como produção (otimiza a performance do Node e ignora pacotes dev)
-ENV NODE_ENV=production
-
-WORKDIR /app
-
-# Copia os arquivos de dependência primeiro para aproveitar o cache de camadas do Docker
-COPY package*.json ./
-
-# Usa 'npm install' já que o package-lock.json não está presente
-# --omit=dev garante que dependências de desenvolvimento não sejam instaladas
-# Limpa o cache do npm na mesma camada para economizar espaço
-RUN npm install --omit=dev && npm cache clean --force
-
-# Copia o restante do código para o container
-COPY . .
-
-# Por segurança, roda o container usando um usuário sem privilégios de root
-USER node
-
-EXPOSE 3000
-
-# Executar o Node diretamente consome menos memória do que usar o 'npm start'
-# Substitua 'index.js' pelo arquivo principal da sua aplicação (ex: server.js, app.js)
-CMD ["node", "index.js"]
+    WORKDIR /app
+    
+    # Copia apenas os arquivos de dependência primeiro
+    COPY package*.json ./
+    
+    # Usa o npm install normal, ignorando as dependências de desenvolvimento
+    RUN npm install --omit=dev
+    
+    # ---------------------------------------------------
+    # Estágio 2: Imagem Final (Enxuta e segura)
+    # ---------------------------------------------------
+    FROM node:18-alpine
+    
+    ENV NODE_ENV=production
+    
+    USER node
+    
+    WORKDIR /app
+    
+    # Copia os arquivos de configuração
+    COPY --chown=node:node package*.json ./
+    
+    # Copia os node_modules do estágio "builder"
+    COPY --chown=node:node --from=builder /app/node_modules ./node_modules
+    
+    # Copia o restante do código da aplicação
+    COPY --chown=node:node . .
+    
+    EXPOSE 3000
+    
+    CMD ["npm", "start"]
