@@ -1,102 +1,268 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
+
 <head>
-    <title>Taverna-Fernando - Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarmitaTech - Login : Underground Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Racing+Sans+One&family=Teko:wght@400;600&display=swap"
+        rel="stylesheet">
     <style>
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Teko', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #0047AB 0%, #1E90FF 100%);
+            /* Fundo asfalto escuro / noite da cidade */
+            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
+            overflow: hidden;
+            position: relative;
+            color: #fff;
         }
-        .login-container {
-            background: white;
-            padding: 40px;
+
+        /* Ambient Neon Glow no fundo */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.15) 0%, transparent 60%);
+            transform: translate(-50%, -50%);
+            z-index: 0;
+        }
+
+        form {
+            z-index: 1;
+            /* Textura de fibra de carbono */
+            background:
+                linear-gradient(27deg, #151515 5px, transparent 5px) 0 5px,
+                linear-gradient(207deg, #151515 5px, transparent 5px) 10px 0px,
+                linear-gradient(27deg, #222 5px, transparent 5px) 0px 10px,
+                linear-gradient(207deg, #222 5px, transparent 5px) 10px 5px,
+                linear-gradient(90deg, #1b1b1b 10px, transparent 10px),
+                linear-gradient(#1d1d1d 25%, #1a1a1a 25%, #1a1a1a 50%, transparent 50%, transparent 75%, #242424 75%, #242424 100%);
+            background-size: 20px 20px;
+            background-color: #131313;
+
+            /* Bordas de neon clássicas do NFS */
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 20px #00ff88, inset 0 0 20px rgba(0, 255, 136, 0.3);
+
+            padding: 40px 40px 50px 50px;
             border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 71, 171, 0.3);
             width: 100%;
             max-width: 400px;
-        }
-        .logo-section {
             text-align: center;
-            margin-bottom: 30px;
+            position: relative;
         }
-        .logo-section img {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 15px;
-            object-fit: contain;
+
+        /* Tira de "velocidade" no formulário */
+        form::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 20px;
+            width: 8px;
+            height: 100%;
+            background: #00ff88;
+            box-shadow: 0 0 15px #00ff88;
+            transform: skewX(-15deg);
         }
+
         h2 {
-            color: #0047AB;
-            font-size: 24px;
+            font-family: 'Racing Sans One', cursive;
+            color: #fff;
             margin-bottom: 30px;
-            text-align: center;
+            font-size: 42px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 4px 4px 0 #000;
+            transform: skewX(-10deg);
         }
-        .form-group {
+
+        .input-group {
+            position: relative;
             margin-bottom: 20px;
+            transform: skewX(-5deg);
         }
-        input {
+
+        input[type="text"],
+        input[type="password"] {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
+            padding: 15px 15px 15px 20px;
+            background: rgba(10, 10, 10, 0.9);
+            border: 1px solid #333;
+            border-bottom: 3px solid #00ff88;
+            color: #00ff88;
+            font-family: 'Teko', sans-serif;
+            font-size: 22px;
+            letter-spacing: 1px;
             transition: all 0.3s ease;
-        }
-        input:focus {
             outline: none;
-            border-color: #0047AB;
-            box-shadow: 0 0 8px rgba(0, 71, 171, 0.2);
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
         }
+
         input::placeholder {
-            color: #999;
+            color: rgba(0, 255, 136, 0.5);
+            font-style: italic;
+            text-transform: uppercase;
         }
+
+        input:focus {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4), inset 0 2px 5px rgba(0, 0, 0, 0.8);
+            transform: scale(1.02);
+        }
+
         button {
             width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #0047AB 0%, #1E90FF 100%);
-            color: white;
+            padding: 15px;
+            background: linear-gradient(90deg, #00ff88, #00b35f);
+            color: #000;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            font-family: 'Racing Sans One', cursive;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
+            transition: all 0.2s ease;
+            margin-top: 15px;
+            transform: skewX(-5deg);
+            box-shadow: 0 0 15px #00ff88;
+            position: relative;
+            overflow: hidden;
         }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+            transition: all 0.4s ease;
+        }
+
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 71, 171, 0.4);
+            transform: skewX(-5deg) scale(1.05);
+            box-shadow: 0 0 25px #00ff88, 0 0 40px #00ff88;
         }
+
+        button:hover::before {
+            left: 100%;
+            transition: all 0.4s ease;
+        }
+
         button:active {
-            transform: translateY(0);
+            transform: skewX(-5deg) scale(0.95);
+        }
+
+        button.btn-register {
+            background: linear-gradient(90deg, #ff0055, #b3003c);
+            color: #fff;
+            box-shadow: 0 0 15px #ff0055;
+        }
+
+        button.btn-register:hover {
+            box-shadow: 0 0 25px #ff0055, 0 0 40px #ff0055;
+        }
+
+        img.avatar {
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 2px solid #333;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 1);
+            transform: skewX(-5deg);
+            width: 150px;
+        }
+
+        /* Decalques estilo NFS */
+        .decal {
+            position: absolute;
+            font-family: 'Racing Sans One', cursive;
+            color: rgba(255, 255, 255, 0.03);
+            font-size: 180px;
+            z-index: 0;
+            pointer-events: none;
+            transform: rotate(-15deg);
+            white-space: nowrap;
+        }
+
+        .decal-1 {
+            top: -40px;
+            left: -150px;
+        }
+
+        .decal-2 {
+            bottom: -60px;
+            right: -100px;
         }
     </style>
 </head>
+
 <body>
-    <div class="login-container">
-        <div class="logo-section">
-            <img src="https://www.tradework.com.br/media/catalog/product/cache/cd63a08b966d107aaaf66bd74393e948/r/e/red_hat_logo_big.jpg" alt="Red Hat Logo">
-            <h2>Taverna Fernando Login</h2>
+    <div class="decal decal-1">NITROUS</div>
+    <div class="decal decal-2">UNDERGROUND</div>
+    <form action="/login" method="POST">
+        <a href="/register" title="Secret Area">
+            <img class="avatar"
+                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTxKYgQflQT45fSCqSXcciCJZ__d19JHIcdSQ&s"
+                alt="Deu nao mo fi">
+        </a>
+        <h2> Rodnei Bar</h2>
+        <div class="input-group">
+            <input type="text" name="username" placeholder="Rider_Name" required>
         </div>
-        <form action="/login" method="POST">
-            <div class="form-group">
-                <input type="text" name="username" placeholder="Usuário" required>
-            </div>
-            <div class="form-group">
-                <input type="password" name="password" placeholder="Senha" required>
-            </div>
-            <button type="submit">Entrar</button>
-        </form>
-    </div>
+        <div class="input-group">
+            <input type="password" name="password" placeholder="Ignition_Key" required>
+        </div>
+        <button type="submit">Acelerar</button>
+        <button type="button" id="btnCadastrar" class="btn-register">Cadastrar</button>
+    </form>
+
+    <script>
+        document.getElementById('btnCadastrar').addEventListener('click', async () => {
+            const usernameInput = document.querySelector('input[name="username"]');
+            const passwordInput = document.querySelector('input[name="password"]');
+            
+            if (!usernameInput.value || !passwordInput.value) {
+                alert('⚠️ Insira um Rider_Name e uma Ignition_Key antes de cadastrar!');
+                return;
+            }
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        username: usernameInput.value,
+                        password: passwordInput.value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    alert('✅ ' + data.message);
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            } catch (error) {
+                alert('❌ Erro de conexão ao tentar cadastrar o piloto.');
+            }
+        });
+    </script>
 </body>
+
 </html>
