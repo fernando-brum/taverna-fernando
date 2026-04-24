@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
 const path = require('path');
-const bcrypt = require('bcryptjs');
+const { scrypt, randomBytes, timingSafeEqual } = require('crypto');
 
 const app = express();
 
@@ -26,7 +26,7 @@ async function connectWithRetry() {
             
             const [adminRows] = await pool.query('SELECT * FROM users WHERE username = "admin"');
             if (adminRows.length === 0) {
-                const adminHash = await bcrypt.hash('admin123', 10);
+                const adminHash = await hashPassword('admin123');
                 await pool.query('INSERT INTO users (username, password) VALUES (?, ?)', ['admin', adminHash]);
                 console.log('✅ [DATABASE] Usuário admin inserido com hash.');
             }
@@ -52,7 +52,7 @@ app.post('/login', async (req, res) => {
         const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
         if (rows.length > 0) {
             const user = rows[0];
-            const match = await bcrypt.compare(password, user.password);
+            const match = await verifyPassword(password, user.password);
             if (match) return res.redirect('/dashboard');
         }
         res.send('<h1>Login Inválido</h1><a href="/">Voltar</a>');
@@ -63,11 +63,28 @@ app.post('/login', async (req, res) => {
 
 app.get('/register', (req, res) => res.render('register'));
 
-// Função específica para cadastrar e enviar a senha com hash para o banco
+function hashPassword(password) {
+    return new Promise((resolve, reject) => {
+        const salt = randomBytes(16).toString('hex');
+        scrypt(password, salt, 64, (err, derivedKey) => {
+            if (err) reject(err);
+            else resolve(`${salt}:${derivedKey.toString('hex')}`);
+        });
+    });
+}
+
+function verifyPassword(password, hash) {
+    return new Promise((resolve, reject) => {
+        const [salt, key] = hash.split(':');
+        scrypt(password, salt, 64, (err, derivedKey) => {
+            if (err) reject(err);
+            else resolve(timingSafeEqual(Buffer.from(key, 'hex'), derivedKey));
+        });
+    });
+}
+
 async function registerUserNoBanco(username, plainTextPassword) {
-    // 1. Gera o hash da senha usando o bcrypt
-    const hash = await bcrypt.hash(plainTextPassword, 10);
-    // 2. Insere no banco com segurança
+    const hash = await hashPassword(plainTextPassword);
     await pool.query('INSERT INTO users (username, password) VALUES (?, ?)', [username, hash]);
 }
 

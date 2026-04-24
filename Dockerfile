@@ -8,8 +8,7 @@
     # Copia apenas os arquivos de dependência primeiro
     COPY package*.json ./
     
-    # Usa o npm install normal, ignorando as dependências de desenvolvimento
-    RUN npm install --omit=dev
+    RUN npm install --omit=dev --registry=https://registry.yarnpkg.com
     
     # ---------------------------------------------------
     # Estágio 2: Imagem Final (Enxuta e segura)
