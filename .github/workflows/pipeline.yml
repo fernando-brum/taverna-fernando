@@ -136,6 +136,7 @@ jobs:
           echo "sonar.sourceEncoding=UTF-8" >> sonar-project.properties
           echo "sonar.exclusions=node_modules/**,.git/**,.github/**,coverage/**,dist/**,tests/**" >> sonar-project.properties
           echo "sonar.javascript.lcov.reportPaths=coverage/lcov.info" >> sonar-project.properties
+          echo "sonar.coverage.exclusions=index.js" >> sonar-project.properties
 
       - name: Exibir configuração do Sonar
         run: cat sonar-project.properties

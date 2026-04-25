@@ -10,3 +10,4 @@ coverage
 tests
 *.md
 .github
+docker-compose.yml
