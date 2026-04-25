@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
 const path = require('path');
-const { scrypt, randomBytes, timingSafeEqual } = require('crypto');
+const { hashPassword, verifyPassword } = require('./src/crypto');
 
 const app = express();
 
@@ -63,26 +63,6 @@ app.post('/login', async (req, res) => {
 
 app.get('/register', (req, res) => res.render('register'));
 
-function hashPassword(password) {
-    return new Promise((resolve, reject) => {
-        const salt = randomBytes(16).toString('hex');
-        scrypt(password, salt, 64, (err, derivedKey) => {
-            if (err) reject(err);
-            else resolve(`${salt}:${derivedKey.toString('hex')}`);
-        });
-    });
-}
-
-function verifyPassword(password, hash) {
-    return new Promise((resolve, reject) => {
-        const [salt, key] = hash.split(':');
-        scrypt(password, salt, 64, (err, derivedKey) => {
-            if (err) reject(err);
-            else resolve(timingSafeEqual(Buffer.from(key, 'hex'), derivedKey));
-        });
-    });
-}
-
 async function registerUserNoBanco(username, plainTextPassword) {
     const hash = await hashPassword(plainTextPassword);
     await pool.query('INSERT INTO users (username, password) VALUES (?, ?)', [username, hash]);
@@ -98,6 +78,21 @@ app.post('/register', async (req, res) => {
     } catch (err) {
         console.error("Erro interno no cadastro:", err);
         res.status(500).json({ success: false, message: 'Erro ao cadastrar: Nome de piloto já existe ou banco fora do ar.' });
+    }
+});
+
+app.post('/add-item', async (req, res) => {
+    const { name, category } = req.body;
+
+    if (!name || name.trim() === '') {
+        return res.status(400).send('<h1>Erro 400: Nome do item não pode ser vazio.</h1><a href="/dashboard">Voltar</a>');
+    }
+
+    try {
+        await pool.query('INSERT INTO items (name, category) VALUES (?, ?)', [name.trim(), category ? category.trim() : null]);
+        res.redirect('/dashboard');
+    } catch (err) {
+        res.status(500).send('Erro ao cadastrar item.');
     }
 });
 

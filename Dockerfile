@@ -29,7 +29,10 @@
     
     # Copia o restante do código da aplicação
     COPY --chown=node:node . .
-    
+
+    # Remove permissão de escrita de todos os arquivos (princípio do menor privilégio)
+    RUN chmod -R a-w /app
+
     EXPOSE 3000
     
     CMD ["npm", "start"]
