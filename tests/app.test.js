@@ -115,3 +115,61 @@ test('GET /dashboard com erro no banco retorna 500', async () => {
     const res = await request(createApp(errorPool), { path: '/dashboard' });
     assert.equal(res.status, 500);
 });
+
+test('POST /orders com dados validos redireciona para /dashboard', async () => {
+    const orderPool = { query: async () => [{ insertId: 1 }] };
+    const res = await request(createApp(orderPool), { method: 'POST', path: '/orders' }, { customer_name: 'Joao', size: 'Media 500g', item_ids: ['1', '2'] });
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.location, '/dashboard');
+});
+
+test('POST /orders sem item_ids redireciona para /dashboard', async () => {
+    const orderPool = { query: async () => [{ insertId: 1 }] };
+    const res = await request(createApp(orderPool), { method: 'POST', path: '/orders' }, { customer_name: 'Maria', size: 'Pequena 350g' });
+    assert.equal(res.status, 302);
+});
+
+test('POST /orders com nome vazio retorna 400', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/orders' }, { customer_name: '', size: 'Media 500g' });
+    assert.equal(res.status, 400);
+});
+
+test('POST /orders sem tamanho retorna 400', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/orders' }, { customer_name: 'Joao', size: '' });
+    assert.equal(res.status, 400);
+});
+
+test('POST /orders com erro no banco retorna 500', async () => {
+    const res = await request(createApp(errorPool), { method: 'POST', path: '/orders' }, { customer_name: 'Joao', size: 'Grande 750g' });
+    assert.equal(res.status, 500);
+});
+
+test('POST /orders/deliver com dados validos retorna success true', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/orders/deliver' }, { order_ids: '1', delivered_to: 'Cliente' });
+    assert.equal(res.status, 200);
+    assert.equal(JSON.parse(res.body).success, true);
+});
+
+test('POST /orders/deliver com multiplos pedidos retorna success true', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/orders/deliver' }, { order_ids: ['1', '2'], delivered_to: 'ao Entregador' });
+    assert.equal(res.status, 200);
+    assert.equal(JSON.parse(res.body).success, true);
+});
+
+test('POST /orders/deliver sem order_ids retorna 400', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/orders/deliver' }, { delivered_to: 'Cliente' });
+    assert.equal(res.status, 400);
+    assert.equal(JSON.parse(res.body).success, false);
+});
+
+test('POST /orders/deliver sem delivered_to retorna 400', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/orders/deliver' }, { order_ids: '1' });
+    assert.equal(res.status, 400);
+    assert.equal(JSON.parse(res.body).success, false);
+});
+
+test('POST /orders/deliver com erro no banco retorna 500', async () => {
+    const res = await request(createApp(errorPool), { method: 'POST', path: '/orders/deliver' }, { order_ids: '1', delivered_to: 'Cliente' });
+    assert.equal(res.status, 500);
+    assert.equal(JSON.parse(res.body).success, false);
+});

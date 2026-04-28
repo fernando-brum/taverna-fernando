@@ -5,83 +5,399 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>taverna-fernando - Login</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: sans-serif;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background: #f4f4f4;
+            overflow: hidden;
+            background: #021a2e;
         }
-        .card {
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 40px;
-            width: 360px;
+
+        /* ── Fundo animado ── */
+        .bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 30%, #0a4d6e 0%, transparent 60%),
+                radial-gradient(ellipse 70% 80% at 80% 70%, #0d7a50 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 50% 50%, #0c3a5c 0%, transparent 70%),
+                linear-gradient(160deg, #021a2e 0%, #042e1e 100%);
+            animation: bgPulse 8s ease-in-out infinite alternate;
+        }
+        @keyframes bgPulse {
+            0%   { filter: hue-rotate(0deg) brightness(1); }
+            100% { filter: hue-rotate(15deg) brightness(1.1); }
+        }
+
+        /* ── Bolhas de luz flotantes ── */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.35;
+            animation: float linear infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .orb-1 { width: 400px; height: 400px; background: radial-gradient(circle, #00d4ff, #0066cc); top: -100px; left: -100px; animation-duration: 18s; }
+        .orb-2 { width: 300px; height: 300px; background: radial-gradient(circle, #00ff99, #00aa66); bottom: -80px; right: -80px; animation-duration: 22s; animation-delay: -8s; }
+        .orb-3 { width: 200px; height: 200px; background: radial-gradient(circle, #66ccff, #0044aa); top: 40%; left: 60%; animation-duration: 15s; animation-delay: -4s; }
+        @keyframes float {
+            0%   { transform: translate(0, 0) scale(1); }
+            33%  { transform: translate(30px, -40px) scale(1.05); }
+            66%  { transform: translate(-20px, 20px) scale(0.95); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* ── Grid de linhas (detalhe aero) ── */
+        .grid-lines {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background-image:
+                linear-gradient(rgba(0,200,255,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,200,255,0.04) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+        }
+
+        /* ── Container principal ── */
+        .scene {
+            position: relative;
+            z-index: 1;
+            perspective: 800px;
+        }
+
+        /* ── Card de vidro principal ── */
+        .glass-card {
+            width: 400px;
+            padding: 48px 40px 40px;
+            border-radius: 28px;
+            background: linear-gradient(
+                145deg,
+                rgba(255,255,255,0.18) 0%,
+                rgba(255,255,255,0.07) 50%,
+                rgba(0,200,255,0.06) 100%
+            );
+            border: 1px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            box-shadow:
+                0 32px 80px rgba(0,0,0,0.5),
+                0 8px 32px rgba(0,0,0,0.3),
+                inset 0 2px 0 rgba(255,255,255,0.4),
+                inset 0 -1px 0 rgba(255,255,255,0.1),
+                0 0 0 1px rgba(0,180,220,0.15);
+            position: relative;
+            overflow: hidden;
+            animation: cardIn 0.7s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        @keyframes cardIn {
+            from { opacity:0; transform: translateY(32px) scale(0.96); }
+            to   { opacity:1; transform: translateY(0) scale(1); }
+        }
+
+        /* Reflexo glossy no topo do card */
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50%;
+            background: linear-gradient(
+                180deg,
+                rgba(255,255,255,0.18) 0%,
+                rgba(255,255,255,0.04) 60%,
+                transparent 100%
+            );
+            border-radius: 28px 28px 0 0;
+            pointer-events: none;
+        }
+
+        /* Brilho de borda lateral esquerda */
+        .glass-card::after {
+            content: '';
+            position: absolute;
+            top: 10%; left: 0;
+            width: 1px;
+            height: 80%;
+            background: linear-gradient(180deg, transparent, rgba(255,255,255,0.5), transparent);
+            pointer-events: none;
+        }
+
+        /* ── Logo ── */
+        .logo-wrap {
             text-align: center;
+            margin-bottom: 24px;
+            position: relative;
         }
-        .logo { height: 60px; margin-bottom: 20px; }
-        h2 { margin-bottom: 24px; font-size: 22px; }
+        .logo {
+            height: 64px;
+            filter: drop-shadow(0 4px 16px rgba(0,200,255,0.5)) drop-shadow(0 0 32px rgba(0,200,255,0.3));
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%,100% { filter: drop-shadow(0 4px 16px rgba(0,200,255,0.5)) drop-shadow(0 0 32px rgba(0,200,255,0.3)); }
+            50%      { filter: drop-shadow(0 4px 24px rgba(0,255,160,0.6)) drop-shadow(0 0 40px rgba(0,255,160,0.35)); }
+        }
+
+        /* ── Título ── */
+        .title {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #ffffff 0%, #a0f0d0 50%, #60d4ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 32px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        /* ── Inputs ── */
+        .input-wrap {
+            position: relative;
+            margin-bottom: 14px;
+        }
+        .input-wrap .icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
         input {
             width: 100%;
-            padding: 10px 12px;
-            margin-bottom: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        button {
-            width: 100%;
-            padding: 11px;
-            background: #cc0000;
+            padding: 13px 16px 13px 42px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 14px;
             color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
+            font-size: 15px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: all 0.25s;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.15);
+        }
+        input::placeholder { color: rgba(255,255,255,0.35); }
+        input:focus {
+            background: rgba(255,255,255,0.13);
+            border-color: rgba(0,220,180,0.6);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.15),
+                0 0 0 3px rgba(0,200,160,0.15),
+                0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        /* ── Botões ── */
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            margin-top: 8px;
             margin-bottom: 10px;
+            border: none;
+            border-radius: 14px;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg,
+                #2af5b0 0%,
+                #00c98a 40%,
+                #009e6e 100%
+            );
+            color: #003322;
+            box-shadow:
+                0 4px 20px rgba(0,180,120,0.5),
+                0 1px 0 rgba(255,255,255,0.5) inset,
+                0 -2px 0 rgba(0,0,0,0.15) inset;
+            transition: all 0.2s;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.3);
         }
-        button:hover { background: #aa0000; }
-        button.btn-secondary {
-            background: #555;
+        /* Reflexo glossy no botão */
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%);
+            border-radius: 14px 14px 0 0;
         }
-        button.btn-secondary:hover { background: #333; }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 28px rgba(0,180,120,0.6), 0 1px 0 rgba(255,255,255,0.5) inset;
+            filter: brightness(1.08);
+        }
+        .btn-primary:active { transform: translateY(1px); filter: brightness(0.95); }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 13px;
+            border-radius: 14px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.75);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-secondary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            border-radius: 14px 14px 0 0;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.28);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        /* ── Toast de feedback ── */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+            z-index: 100;
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.success { background: rgba(0,180,100,0.85); color: #fff; }
+        .toast.error   { background: rgba(200,40,40,0.85);  color: #fff; }
+
+        /* ── Partículas decorativas ── */
+        .particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        .particle {
+            position: absolute;
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: rgba(0,220,200,0.6);
+            animation: rise linear infinite;
+        }
+        @keyframes rise {
+            0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 0.6; }
+            100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <img src="https://www.tradework.com.br/media/catalog/product/cache/cd63a08b966d107aaaf66bd74393e948/r/e/red_hat_logo_big.jpg" alt="Logo" class="logo">
-        <h2>taverna-fernando</h2>
-        <form action="/login" method="POST">
-            <input type="text" name="username" placeholder="Usuário" required>
-            <input type="password" name="password" placeholder="Senha" required>
-            <button type="submit">Entrar</button>
-            <button type="button" id="btnCadastrar" class="btn-secondary">Cadastrar</button>
-        </form>
+
+    <div class="bg"></div>
+    <div class="grid-lines"></div>
+
+    <!-- Bolhas de luz -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- Partículas -->
+    <div class="particles" id="particles"></div>
+
+    <div class="scene">
+        <div class="glass-card">
+            <div class="logo-wrap">
+                <img src="/assets/MSN-ICON.png" alt="Logo" class="logo">
+            </div>
+            <h1 class="title">taverna-fernando</h1>
+            <p class="subtitle">Sistema de Gestão</p>
+
+            <form action="/login" method="POST">
+                <div class="input-wrap">
+                    <span class="icon">👤</span>
+                    <input type="text" name="username" placeholder="Usuário" required autocomplete="username">
+                </div>
+                <div class="input-wrap">
+                    <span class="icon">🔑</span>
+                    <input type="password" name="password" placeholder="Senha" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-primary">Entrar</button>
+                <button type="button" id="btnCadastrar" class="btn-secondary">Criar conta</button>
+            </form>
+        </div>
     </div>
 
-    <script>
-        document.getElementById('btnCadastrar').addEventListener('click', async () => {
-            const usernameInput = document.querySelector('input[name="username"]');
-            const passwordInput = document.querySelector('input[name="password"]');
+    <div class="toast" id="toast"></div>
 
-            if (!usernameInput.value || !passwordInput.value) {
-                alert('Insira usuário e senha antes de cadastrar.');
+    <script>
+        // Partículas
+        const container = document.getElementById('particles');
+        for (let i = 0; i < 18; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + 'vw';
+            p.style.animationDuration = (8 + Math.random() * 12) + 's';
+            p.style.animationDelay = (-Math.random() * 20) + 's';
+            p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+            p.style.background = `hsl(${160 + Math.random()*60}, 80%, 65%)`;
+            container.appendChild(p);
+        }
+
+        // Toast
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type;
+            requestAnimationFrame(() => t.classList.add('show'));
+            setTimeout(() => t.classList.remove('show'), 3500);
+        }
+
+        // Cadastro
+        document.getElementById('btnCadastrar').addEventListener('click', async () => {
+            const username = document.querySelector('input[name="username"]').value;
+            const password = document.querySelector('input[name="password"]').value;
+            if (!username || !password) {
+                showToast('Preencha usuário e senha primeiro.', 'error');
                 return;
             }
-
             try {
-                const response = await fetch('/register', {
+                const res = await fetch('/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ username: usernameInput.value, password: passwordInput.value })
+                    body: new URLSearchParams({ username, password })
                 });
-                const data = await response.json();
-                alert(data.success ? '✅ ' + data.message : '❌ ' + data.message);
+                const data = await res.json();
+                showToast(data.message, data.success ? 'success' : 'error');
             } catch {
-                alert('❌ Erro de conexão ao tentar cadastrar.');
+                showToast('Erro de conexão.', 'error');
             }
         });
     </script>

@@ -1,42 +1,592 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>taverna-fernando - Dashboard</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .logo { height: 60px; }
-        .grid { display: flex; gap: 20px; }
-        .card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; width: 300px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: #021a2e;
+            padding: 24px;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* ── Fundo ── */
+        .bg {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background:
+                radial-gradient(ellipse 80% 60% at 15% 25%, #0a4d6e 0%, transparent 60%),
+                radial-gradient(ellipse 60% 70% at 85% 75%, #0d7a50 0%, transparent 55%),
+                linear-gradient(160deg, #021a2e 0%, #042e1e 100%);
+        }
+        .grid-lines {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(0,200,255,0.04) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0,200,255,0.04) 1px, transparent 1px);
+            background-size: 48px 48px;
+        }
+        .orb {
+            position: fixed; border-radius: 50%; filter: blur(70px); opacity: 0.25;
+            animation: orbFloat linear infinite; z-index: 0; pointer-events: none;
+        }
+        .orb-1 { width:500px;height:500px;background:radial-gradient(#00d4ff,#0066cc);top:-150px;left:-150px;animation-duration:22s; }
+        .orb-2 { width:350px;height:350px;background:radial-gradient(#00ff99,#00aa66);bottom:-100px;right:-100px;animation-duration:28s;animation-delay:-12s; }
+        @keyframes orbFloat {
+            0%,100%{transform:translate(0,0)}
+            33%{transform:translate(40px,-50px)}
+            66%{transform:translate(-30px,30px)}
+        }
+
+        /* ── Layout ── */
+        .content { position: relative; z-index: 1; }
+
+        /* ── Header ── */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 28px; padding: 16px 24px;
+            background: linear-gradient(135deg,rgba(255,255,255,0.14),rgba(255,255,255,0.06));
+            border: 1px solid rgba(255,255,255,0.22);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.35);
+        }
+        .header h1 { font-size: 20px; font-weight: 600; background: linear-gradient(135deg,#fff,#a0f0d0); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .logo { height: 52px; filter: drop-shadow(0 2px 12px rgba(0,200,255,0.5)); }
+
+        /* ── Cards ── */
+        .grid { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 24px; }
+        .card {
+            flex: 1; min-width: 260px;
+            background: linear-gradient(145deg,rgba(255,255,255,0.13),rgba(255,255,255,0.05));
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px; padding: 20px;
+            backdrop-filter: blur(18px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3);
+            position: relative; overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card::before {
+            content:''; position:absolute; top:0;left:0;right:0;height:40%;
+            background: linear-gradient(180deg,rgba(255,255,255,0.12),transparent);
+            border-radius:20px 20px 0 0; pointer-events:none;
+        }
+        .card:hover { transform:translateY(-3px); box-shadow:0 14px 40px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.35); }
+        .card h3 {
+            font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:1px;
+            color:#7ae8c8; margin-bottom:14px; padding-bottom:10px;
+            border-bottom:1px solid rgba(255,255,255,0.12);
+        }
+
+        /* ── Inputs ── */
+        input[type="text"], select {
+            width:100%; padding:10px 14px; margin-bottom:10px;
+            background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.18);
+            border-radius:12px; color:#fff; font-size:14px; font-family:'Inter',sans-serif; outline:none;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+            transition:all 0.2s;
+        }
+        input[type="text"]::placeholder { color:rgba(255,255,255,0.35); }
+        input[type="text"]:focus, select:focus {
+            background:rgba(255,255,255,0.14); border-color:rgba(0,220,180,0.5);
+            box-shadow:0 0 0 3px rgba(0,200,160,0.12), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        select option { background:#0d3d52; }
+
+        /* ── Tamanho pills ── */
+        .size-group { display:flex; gap:8px; margin-bottom:12px; }
+        .size-group input[type="radio"] { display:none; }
+        .size-group label {
+            flex:1; text-align:center; padding:8px 4px; border-radius:12px;
+            border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.07);
+            cursor:pointer; font-size:12px; font-family:'Inter',sans-serif;
+            transition:all 0.2s; position:relative; overflow:hidden;
+        }
+        .size-group label::before {
+            content:''; position:absolute; top:0;left:0;right:0;height:50%;
+            background:linear-gradient(180deg,rgba(255,255,255,0.1),transparent);
+            border-radius:12px 12px 0 0;
+        }
+        .size-group input[type="radio"]:checked + label {
+            background:linear-gradient(180deg,#2af5b0,#009e6e);
+            border-color:#2af5b0; color:#003322; font-weight:700;
+            box-shadow:0 4px 16px rgba(0,180,120,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+        }
+
+        /* ── Checkboxes de itens ── */
+        .items-check { max-height:130px; overflow-y:auto; display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+        .items-check label {
+            display:flex; align-items:center; gap:8px; padding:6px 10px;
+            border-radius:9px; background:rgba(255,255,255,0.06); cursor:pointer; font-size:13px;
+            transition:background 0.15s;
+        }
+        .items-check label:hover { background:rgba(255,255,255,0.12); }
+        .items-check input[type="checkbox"] { accent-color:#1aaa6e; width:14px; height:14px; }
+
+        /* ── Botões ── */
+        .btn {
+            width:100%; padding:11px; border:none; border-radius:12px;
+            font-family:'Inter',sans-serif; font-size:14px; font-weight:600;
+            cursor:pointer; position:relative; overflow:hidden; transition:all 0.2s;
+        }
+        .btn::before {
+            content:''; position:absolute; top:0;left:0;right:0;height:50%;
+            background:linear-gradient(180deg,rgba(255,255,255,0.35),transparent);
+            border-radius:12px 12px 0 0;
+        }
+        .btn-green {
+            background:linear-gradient(180deg,#2af5b0 0%,#00c98a 45%,#009e6e 100%);
+            color:#003322; box-shadow:0 4px 16px rgba(0,180,120,0.45), inset 0 -1px 0 rgba(0,0,0,0.1);
+            text-shadow:0 1px 0 rgba(255,255,255,0.3);
+        }
+        .btn-green:hover { filter:brightness(1.1); transform:translateY(-1px); }
+        .btn-blue {
+            background:linear-gradient(180deg,#56c6ff 0%,#1a90d4 45%,#0d6ba8 100%);
+            color:#fff; box-shadow:0 4px 16px rgba(0,120,200,0.4);
+            margin-top:8px;
+        }
+        .btn-blue:hover { filter:brightness(1.1); transform:translateY(-1px); }
+        .btn:active { transform:scale(0.97)!important; }
+
+        /* ── Lista de ingredientes ── */
+        .item-list { list-style:none; }
+        .item-list li {
+            padding:6px 10px; border-radius:8px;
+            background:rgba(255,255,255,0.06); margin-bottom:4px; font-size:13px;
+        }
+
+        /* ── Seções de pedidos ── */
+        .orders-section {
+            background:linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04));
+            border:1px solid rgba(255,255,255,0.18); border-radius:20px; padding:22px;
+            backdrop-filter:blur(18px);
+            box-shadow:0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.25);
+            margin-bottom:20px; position:relative; overflow:hidden;
+        }
+        .orders-section::before {
+            content:''; position:absolute; top:0;left:0;right:0;height:35%;
+            background:linear-gradient(180deg,rgba(255,255,255,0.08),transparent);
+            border-radius:20px 20px 0 0; pointer-events:none;
+        }
+        .section-header {
+            display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;
+        }
+        .section-title { font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:#7ae8c8; }
+
+        /* ── Tabela ── */
+        table { width:100%; border-collapse:collapse; }
+        thead th {
+            padding:10px 12px; background:rgba(255,255,255,0.07);
+            text-align:left; font-size:11px; text-transform:uppercase;
+            letter-spacing:0.8px; color:#7ae8c8;
+            border-bottom:1px solid rgba(255,255,255,0.12);
+        }
+        tbody tr { transition:background 0.15s; }
+        tbody tr:hover { background:rgba(255,255,255,0.05); }
+        tbody td { padding:11px 12px; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.07); vertical-align:middle; }
+        .empty-msg { color:rgba(255,255,255,0.4); font-size:13px; font-style:italic; }
+
+        /* ── Badges ── */
+        .badge {
+            display:inline-block; padding:4px 12px; border-radius:20px;
+            font-size:11px; font-weight:700; letter-spacing:0.3px;
+            cursor:pointer; position:relative; overflow:hidden; transition:all 0.2s;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+        .badge::before {
+            content:''; position:absolute; top:0;left:0;right:0;height:50%;
+            background:linear-gradient(180deg,rgba(255,255,255,0.35),transparent);
+        }
+        .badge-aberto {
+            background:linear-gradient(180deg,#56d4f0,#0da8c8,#097f99);
+            color:#fff;
+        }
+        .badge-aberto:hover { filter:brightness(1.2); transform:scale(1.05); box-shadow:0 4px 14px rgba(0,180,220,0.5),inset 0 1px 0 rgba(255,255,255,0.4); }
+        .badge-entregue {
+            background:linear-gradient(180deg,#2af5b0,#009e6e);
+            color:#003322; cursor:default;
+        }
+        .size-tag {
+            display:inline-block; padding:3px 9px; border-radius:8px; font-size:11px;
+            background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.18);
+        }
+        .delivered-to-tag {
+            display:inline-block; padding:3px 9px; border-radius:8px; font-size:11px;
+            background:rgba(86,198,255,0.15); border:1px solid rgba(86,198,255,0.3); color:#a0e8ff;
+        }
+
+        /* ── Checkbox de seleção ── */
+        .order-check { accent-color:#1aaa6e; width:16px; height:16px; cursor:pointer; }
+        .select-all { accent-color:#1aaa6e; width:14px; height:14px; cursor:pointer; }
+
+        /* ── Botão concluir selecionados ── */
+        .btn-concluir-sel {
+            padding:8px 18px; border:none; border-radius:10px;
+            background:linear-gradient(180deg,#56c6ff,#0d6ba8);
+            color:#fff; font-size:12px; font-weight:600; font-family:'Inter',sans-serif;
+            cursor:pointer; position:relative; overflow:hidden; transition:all 0.2s;
+            box-shadow:0 4px 14px rgba(0,120,200,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+        .btn-concluir-sel::before {
+            content:''; position:absolute; top:0;left:0;right:0;height:50%;
+            background:linear-gradient(180deg,rgba(255,255,255,0.3),transparent);
+        }
+        .btn-concluir-sel:hover { filter:brightness(1.15); transform:translateY(-1px); }
+        .btn-concluir-sel:disabled { opacity:0.4; cursor:default; transform:none; filter:none; }
+
+        /* ── Modal ── */
+        .modal-overlay {
+            position:fixed; inset:0; z-index:100; display:flex;
+            justify-content:center; align-items:center;
+            background:rgba(0,0,0,0.6); backdrop-filter:blur(8px);
+            opacity:0; pointer-events:none; transition:opacity 0.3s;
+        }
+        .modal-overlay.show { opacity:1; pointer-events:all; }
+
+        .modal-glass {
+            width:360px; padding:36px 32px 28px;
+            background:linear-gradient(145deg,rgba(255,255,255,0.18),rgba(255,255,255,0.07));
+            border:1px solid rgba(255,255,255,0.28); border-radius:24px;
+            backdrop-filter:blur(28px);
+            box-shadow:0 32px 80px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.4);
+            position:relative; overflow:hidden;
+            transform:scale(0.9) translateY(20px);
+            transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);
+        }
+        .modal-overlay.show .modal-glass { transform:scale(1) translateY(0); }
+        .modal-glass::before {
+            content:''; position:absolute; top:0;left:0;right:0;height:40%;
+            background:linear-gradient(180deg,rgba(255,255,255,0.18),transparent);
+            border-radius:24px 24px 0 0; pointer-events:none;
+        }
+        .modal-title {
+            font-size:15px; font-weight:700; text-align:center; margin-bottom:22px;
+            background:linear-gradient(135deg,#fff,#a0f0d0); -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent; background-clip:text;
+        }
+
+        /* ── Pill toggle do modal ── */
+        .pill-toggle {
+            display:flex; background:rgba(0,0,0,0.25);
+            border:1px solid rgba(255,255,255,0.15); border-radius:50px;
+            padding:4px; margin-bottom:24px; position:relative;
+            box-shadow:inset 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .pill-toggle input[type="radio"] { display:none; }
+        .pill-toggle label {
+            flex:1; text-align:center; padding:10px 8px;
+            border-radius:50px; font-size:13px; font-weight:500;
+            cursor:pointer; color:rgba(255,255,255,0.55); transition:all 0.25s;
+            position:relative; z-index:1;
+        }
+        .pill-toggle input[type="radio"]:checked + label {
+            color:#003322; font-weight:700;
+        }
+        /* Slider animado */
+        .pill-slider {
+            position:absolute; top:4px; bottom:4px; width:calc(50% - 4px);
+            background:linear-gradient(180deg,#2af5b0,#009e6e);
+            border-radius:50px; transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            box-shadow:0 4px 14px rgba(0,180,120,0.5), inset 0 1px 0 rgba(255,255,255,0.5);
+            left:4px; z-index:0;
+        }
+        .pill-slider.right { transform:translateX(calc(100% + 0px)); }
+
+        .modal-actions { display:flex; gap:10px; }
+        .btn-modal-confirm {
+            flex:1; padding:12px; border:none; border-radius:12px;
+            background:linear-gradient(180deg,#2af5b0,#009e6e);
+            color:#003322; font-size:14px; font-weight:700; font-family:'Inter',sans-serif;
+            cursor:pointer; position:relative; overflow:hidden; transition:all 0.2s;
+            box-shadow:0 4px 16px rgba(0,180,120,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+        .btn-modal-confirm::before {
+            content:''; position:absolute; top:0;left:0;right:0;height:50%;
+            background:linear-gradient(180deg,rgba(255,255,255,0.35),transparent);
+        }
+        .btn-modal-confirm:hover { filter:brightness(1.1); transform:translateY(-1px); }
+        .btn-modal-cancel {
+            flex:1; padding:12px; border:1px solid rgba(255,255,255,0.2); border-radius:12px;
+            background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.75);
+            font-size:14px; font-weight:500; font-family:'Inter',sans-serif;
+            cursor:pointer; transition:all 0.2s;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+        .btn-modal-cancel:hover { background:rgba(255,255,255,0.13); color:#fff; }
+
+        /* ── Toast ── */
+        .toast {
+            position:fixed; bottom:28px; left:50%;
+            transform:translateX(-50%) translateY(60px);
+            padding:11px 24px; border-radius:40px; font-size:13px; font-weight:500;
+            backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.2);
+            box-shadow:0 8px 32px rgba(0,0,0,0.4); opacity:0; z-index:200;
+            transition:all 0.4s cubic-bezier(0.16,1,0.3,1); white-space:nowrap;
+        }
+        .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+        .toast.success { background:rgba(0,160,90,0.88); color:#fff; }
+        .toast.error   { background:rgba(200,40,40,0.88); color:#fff; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Painel Administrativo - taverna-fernando</h1>
-        <img src="https://www.tradework.com.br/media/catalog/product/cache/cd63a08b966d107aaaf66bd74393e948/r/e/red_hat_logo_big.jpg" alt="Logo" class="logo">
-    </div>
-    <div class="grid">
-        <div class="card">
-            <h3>Novo Item (Ingrediente)</h3>
-            <form action="/add-item" method="POST">
-                <input type="text" name="name" placeholder="Nome (Ex: Batata Doce)" required><br><br>
-                <input type="text" name="category" placeholder="Categoria (Ex: Carboidrato)"><br><br>
-                <button type="submit">Cadastrar Item</button>
-            </form>
+    <div class="bg"></div>
+    <div class="grid-lines"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="content">
+
+        <!-- Header -->
+        <div class="header">
+            <h1>Painel Administrativo — taverna-fernando</h1>
+            <img src="/assets/MSN-ICON.png" alt="Logo" class="logo">
         </div>
 
-        <div class="card">
-            <h3>Itens Cadastrados</h3>
-            <ul>
-                <% items.forEach(item => { %>
-                    <li><%= item.name %> (<%= item.category %>)</li>
-                <% }) %>
-            </ul>
+        <!-- Cards -->
+        <div class="grid">
+
+            <div class="card">
+                <h3>➕ Novo Ingrediente</h3>
+                <form action="/add-item" method="POST">
+                    <input type="text" name="name" placeholder="Nome (Ex: Batata Doce)" required>
+                    <input type="text" name="category" placeholder="Categoria (Ex: Carboidrato)">
+                    <button type="submit" class="btn btn-green">Cadastrar Item</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>📋 Ingredientes Disponíveis</h3>
+                <ul class="item-list">
+                    <% if (items.length === 0) { %>
+                        <li style="color:rgba(255,255,255,0.35)">Nenhum ingrediente cadastrado.</li>
+                    <% } %>
+                    <% items.forEach(item => { %>
+                        <li><%= item.name %> <span style="opacity:0.5;font-size:11px">(<%= item.category %>)</span></li>
+                    <% }) %>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>🧺 Novo Pedido</h3>
+                <form action="/orders" method="POST">
+                    <input type="text" name="customer_name" placeholder="Nome do Cliente" required>
+
+                    <p style="font-size:11px;opacity:0.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Tamanho:</p>
+                    <div class="size-group">
+                        <input type="radio" name="size" id="p" value="Pequena 350g" required>
+                        <label for="p">🥡 Pequena<br><span style="font-size:10px;opacity:0.8">350g</span></label>
+                        <input type="radio" name="size" id="m" value="Media 500g">
+                        <label for="m">🍱 Média<br><span style="font-size:10px;opacity:0.8">500g</span></label>
+                        <input type="radio" name="size" id="g" value="Grande 750g">
+                        <label for="g">🫙 Grande<br><span style="font-size:10px;opacity:0.8">750g</span></label>
+                    </div>
+
+                    <p style="font-size:11px;opacity:0.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Compor com:</p>
+                    <div class="items-check">
+                        <% if (items.length === 0) { %>
+                            <span style="font-size:12px;opacity:0.4">Cadastre ingredientes primeiro.</span>
+                        <% } %>
+                        <% items.forEach(item => { %>
+                            <label>
+                                <input type="checkbox" name="item_ids" value="<%= item.id %>">
+                                <%= item.name %> <span style="opacity:0.5;font-size:11px">(<%= item.category %>)</span>
+                            </label>
+                        <% }) %>
+                    </div>
+
+                    <button type="submit" class="btn btn-green">Registrar Pedido</button>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- Pedidos Ativos -->
+        <div class="orders-section">
+            <div class="section-header">
+                <span class="section-title">📦 Pedidos Ativos</span>
+                <button class="btn-concluir-sel" id="btnConcluir" disabled>Concluir Selecionados</button>
+            </div>
+            <% if (orders.length === 0) { %>
+                <p class="empty-msg">Nenhum pedido ativo no momento.</p>
+            <% } else { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" class="select-all" id="selectAll" title="Selecionar todos"></th>
+                            <th>#</th><th>Cliente</th><th>Tamanho</th><th>Ingredientes</th><th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% orders.forEach(order => { %>
+                            <tr>
+                                <td><input type="checkbox" class="order-check" value="<%= order.id %>"></td>
+                                <td><%= order.id %></td>
+                                <td><%= order.customer_name %></td>
+                                <td><span class="size-tag"><%= order.size %></span></td>
+                                <td style="font-size:12px;opacity:0.8"><%= order.itens || '—' %></td>
+                                <td>
+                                    <span class="badge badge-aberto" data-id="<%= order.id %>" title="Clique para concluir entrega">
+                                        Aberto
+                                    </span>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } %>
+        </div>
+
+        <!-- Pedidos Entregues -->
+        <div class="orders-section">
+            <div class="section-header">
+                <span class="section-title">✅ Pedidos Entregues</span>
+            </div>
+            <% if (delivered.length === 0) { %>
+                <p class="empty-msg">Nenhuma entrega registrada ainda.</p>
+            <% } else { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th><th>Cliente</th><th>Tamanho</th><th>Ingredientes</th><th>Entregue a</th><th>Data/Hora</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% delivered.forEach(order => { %>
+                            <tr>
+                                <td><%= order.id %></td>
+                                <td><%= order.customer_name %></td>
+                                <td><span class="size-tag"><%= order.size %></span></td>
+                                <td style="font-size:12px;opacity:0.8"><%= order.itens || '—' %></td>
+                                <td><span class="delivered-to-tag"><%= order.delivered_to %></span></td>
+                                <td style="font-size:12px;opacity:0.7">
+                                    <%= new Date(order.delivered_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } %>
+        </div>
+
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-glass">
+            <p class="modal-title">Produto entrega a:</p>
+            <div class="pill-toggle">
+                <div class="pill-slider" id="pillSlider"></div>
+                <input type="radio" name="delivered_to" id="optCliente" value="Cliente" checked>
+                <label for="optCliente">Cliente</label>
+                <input type="radio" name="delivered_to" id="optEntregador" value="Entregador">
+                <label for="optEntregador">ao Entregador</label>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal-confirm" id="btnConfirm">Concluir</button>
+                <button class="btn-modal-cancel" id="btnCancel">Cancelar</button>
+            </div>
         </div>
     </div>
 
-    <hr>
-    <h2>📦 Pedidos Ativos</h2>
-    <p><i>Aqui será implementado o Kanban nas próximas aulas...</i></p>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let pendingIds = [];
+
+        // ── Toast ──
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type;
+            requestAnimationFrame(() => t.classList.add('show'));
+            setTimeout(() => t.classList.remove('show'), 3200);
+        }
+
+        // ── Modal ──
+        function openModal(ids) {
+            pendingIds = ids;
+            document.getElementById('optCliente').checked = true;
+            document.getElementById('pillSlider').classList.remove('right');
+            document.getElementById('modal').classList.add('show');
+        }
+        function closeModal() {
+            pendingIds = [];
+            document.getElementById('modal').classList.remove('show');
+        }
+
+        document.getElementById('btnCancel').addEventListener('click', closeModal);
+        document.getElementById('modal').addEventListener('click', e => {
+            if (e.target === document.getElementById('modal')) closeModal();
+        });
+
+        // Pill slider animation
+        document.querySelectorAll('input[name="delivered_to"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                document.getElementById('pillSlider').classList.toggle('right', radio.value === 'Entregador');
+            });
+        });
+
+        // ── Confirmar entrega ──
+        document.getElementById('btnConfirm').addEventListener('click', async () => {
+            const deliveredTo = document.querySelector('input[name="delivered_to"]:checked').value;
+            const params = new URLSearchParams();
+            pendingIds.forEach(id => params.append('order_ids', id));
+            params.append('delivered_to', deliveredTo);
+
+            try {
+                const res = await fetch('/orders/deliver', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`✅ ${pendingIds.length} pedido(s) marcado(s) como Entregue`, 'success');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    showToast('❌ Erro ao atualizar pedidos.', 'error');
+                }
+            } catch {
+                showToast('❌ Erro de conexão.', 'error');
+            }
+            closeModal();
+        });
+
+        // ── Click no badge "Aberto" ──
+        document.querySelectorAll('.badge-aberto').forEach(badge => {
+            badge.addEventListener('click', () => openModal([badge.dataset.id]));
+        });
+
+        // ── Multi-select + botão concluir selecionados ──
+        const checkboxes = document.querySelectorAll('.order-check');
+        const btnConcluir = document.getElementById('btnConcluir');
+        const selectAll = document.getElementById('selectAll');
+
+        function updateBtnState() {
+            const checked = [...checkboxes].filter(c => c.checked);
+            btnConcluir.disabled = checked.length === 0;
+            if (selectAll) selectAll.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
+            if (selectAll) selectAll.checked = checked.length === checkboxes.length && checkboxes.length > 0;
+        }
+
+        checkboxes.forEach(cb => cb.addEventListener('change', updateBtnState));
+
+        if (selectAll) {
+            selectAll.addEventListener('change', () => {
+                checkboxes.forEach(cb => cb.checked = selectAll.checked);
+                updateBtnState();
+            });
+        }
+
+        btnConcluir.addEventListener('click', () => {
+            const ids = [...checkboxes].filter(c => c.checked).map(c => c.value);
+            if (ids.length > 0) openModal(ids);
+        });
+    </script>
 </body>
 </html>
