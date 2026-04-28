@@ -58,6 +58,15 @@
         }
         .header h1 { font-size: 20px; font-weight: 600; background: linear-gradient(135deg,#fff,#a0f0d0); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
         .logo { height: 52px; filter: drop-shadow(0 2px 12px rgba(0,200,255,0.5)); }
+        .nav-kanban {
+            display:inline-flex; align-items:center; gap:6px;
+            padding:8px 18px; border-radius:12px; font-size:13px; font-weight:600;
+            background:linear-gradient(135deg,rgba(120,80,255,0.25),rgba(80,40,200,0.15));
+            border:1px solid rgba(160,120,255,0.4); color:#c4aaff;
+            text-decoration:none; transition:all 0.2s;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+        .nav-kanban:hover { background:linear-gradient(135deg,rgba(140,100,255,0.4),rgba(100,60,220,0.3)); color:#fff; transform:translateY(-1px); }
 
         /* ── Cards ── */
         .grid { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -159,6 +168,59 @@
             padding:6px 10px; border-radius:8px;
             background:rgba(255,255,255,0.06); margin-bottom:4px; font-size:13px;
         }
+
+        /* ── Controle de estoque ── */
+        .stock-sub-label {
+            font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+            margin-bottom:6px; margin-top:2px;
+        }
+        .stock-sub-label.avail { color:#7ae8c8; }
+        .stock-sub-label.out   { color:#ffaa55; }
+        .stock-divider {
+            border:none; border-top:1px solid rgba(255,255,255,0.1);
+            margin:12px 0;
+        }
+        .stock-list {
+            max-height:110px; overflow-y:auto; display:flex; flex-direction:column; gap:4px;
+            margin-bottom:10px;
+        }
+        .stock-list::-webkit-scrollbar { width:3px; }
+        .stock-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:2px; }
+        .stock-list label {
+            display:flex; align-items:center; gap:8px; padding:5px 10px;
+            border-radius:9px; cursor:pointer; font-size:12px; transition:background 0.15s;
+        }
+        .stock-list.avail label { background:rgba(0,200,140,0.08); }
+        .stock-list.avail label:hover { background:rgba(0,200,140,0.16); }
+        .stock-list.out   label { background:rgba(255,140,40,0.08); }
+        .stock-list.out   label:hover { background:rgba(255,140,40,0.16); }
+        .stock-list input[type="checkbox"] { width:13px; height:13px; }
+        .stock-list.avail input[type="checkbox"] { accent-color:#1aaa6e; }
+        .stock-list.out   input[type="checkbox"] { accent-color:#cc6600; }
+        .stock-empty { font-size:11px; color:rgba(255,255,255,0.25); padding:4px 10px; }
+
+        .btn-row { display:flex; gap:8px; margin-top:4px; }
+        .btn-sm {
+            flex:1; padding:8px; border:none; border-radius:10px;
+            font-family:'Inter',sans-serif; font-size:12px; font-weight:700;
+            cursor:pointer; position:relative; overflow:hidden; transition:all 0.2s;
+        }
+        .btn-sm::before {
+            content:''; position:absolute;top:0;left:0;right:0;height:50%;
+            background:linear-gradient(180deg,rgba(255,255,255,0.3),transparent);
+            border-radius:10px 10px 0 0;
+        }
+        .btn-sm-green {
+            background:linear-gradient(180deg,#2af5b0,#009e6e); color:#003322;
+            box-shadow:0 3px 12px rgba(0,180,120,0.4);
+        }
+        .btn-sm-green:hover { filter:brightness(1.1); transform:translateY(-1px); }
+        .btn-sm-orange {
+            background:linear-gradient(180deg,#ffbb44,#cc7700); color:#2a1400;
+            box-shadow:0 3px 12px rgba(200,120,0,0.4);
+        }
+        .btn-sm-orange:hover { filter:brightness(1.1); transform:translateY(-1px); }
+        .btn-sm:active { transform:scale(0.97)!important; }
 
         /* ── Seções de pedidos ── */
         .orders-section {
@@ -343,7 +405,10 @@
 
         <!-- Header -->
         <div class="header">
-            <h1>Painel Administrativo — taverna-fernando</h1>
+            <div style="display:flex;align-items:center;gap:16px">
+                <h1>Painel Administrativo — taverna-fernando</h1>
+                <a href="/kanban" class="nav-kanban">🍱 Kanban da Cozinha</a>
+            </div>
             <img src="/assets/MSN-ICON.png" alt="Logo" class="logo">
         </div>
 
@@ -360,15 +425,45 @@
             </div>
 
             <div class="card">
-                <h3>📋 Ingredientes Disponíveis</h3>
-                <ul class="item-list">
-                    <% if (items.length === 0) { %>
-                        <li style="color:rgba(255,255,255,0.35)">Nenhum ingrediente cadastrado.</li>
-                    <% } %>
-                    <% items.forEach(item => { %>
-                        <li><%= item.name %> <span style="opacity:0.5;font-size:11px">(<%= item.category %>)</span></li>
-                    <% }) %>
-                </ul>
+                <h3>📋 Ingredientes</h3>
+
+                <p class="stock-sub-label avail">✅ Disponíveis</p>
+                <form action="/items/status" method="POST">
+                    <input type="hidden" name="available" value="false">
+                    <div class="stock-list avail">
+                        <% const availItems = items.filter(i => i.available); %>
+                        <% if (availItems.length === 0) { %>
+                            <span class="stock-empty">Nenhum disponível.</span>
+                        <% } %>
+                        <% availItems.forEach(item => { %>
+                            <label>
+                                <input type="checkbox" name="item_ids" value="<%= item.id %>">
+                                <%= item.name %> <span style="opacity:0.45;font-size:10px">(<%= item.category %>)</span>
+                            </label>
+                        <% }) %>
+                    </div>
+                    <button type="submit" class="btn-sm btn-sm-orange">⚠ Marcar Em Falta</button>
+                </form>
+
+                <hr class="stock-divider">
+
+                <p class="stock-sub-label out">⚠ Em Falta</p>
+                <form action="/items/status" method="POST">
+                    <input type="hidden" name="available" value="true">
+                    <div class="stock-list out">
+                        <% const outItems = items.filter(i => !i.available); %>
+                        <% if (outItems.length === 0) { %>
+                            <span class="stock-empty">Nenhum em falta.</span>
+                        <% } %>
+                        <% outItems.forEach(item => { %>
+                            <label>
+                                <input type="checkbox" name="item_ids" value="<%= item.id %>">
+                                <%= item.name %> <span style="opacity:0.45;font-size:10px">(<%= item.category %>)</span>
+                            </label>
+                        <% }) %>
+                    </div>
+                    <button type="submit" class="btn-sm btn-sm-green">✅ Marcar Disponível</button>
+                </form>
             </div>
 
             <div class="card">
@@ -388,10 +483,11 @@
 
                     <p style="font-size:11px;opacity:0.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Compor com:</p>
                     <div class="items-check">
-                        <% if (items.length === 0) { %>
-                            <span style="font-size:12px;opacity:0.4">Cadastre ingredientes primeiro.</span>
+                        <% const pedidoItems = items.filter(i => i.available); %>
+                        <% if (pedidoItems.length === 0) { %>
+                            <span style="font-size:12px;opacity:0.4">Nenhum ingrediente disponível.</span>
                         <% } %>
-                        <% items.forEach(item => { %>
+                        <% pedidoItems.forEach(item => { %>
                             <label>
                                 <input type="checkbox" name="item_ids" value="<%= item.id %>">
                                 <%= item.name %> <span style="opacity:0.5;font-size:11px">(<%= item.category %>)</span>

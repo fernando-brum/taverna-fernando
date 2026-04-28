@@ -39,6 +39,23 @@ function createApp(pool) {
         }
     });
 
+    app.post('/items/status', async (req, res) => {
+        const { item_ids, available } = req.body;
+        if (!item_ids) {
+            return res.status(400).send('<h1>Erro 400: Selecione ao menos um ingrediente.</h1><a href="/dashboard">Voltar</a>');
+        }
+        const ids = Array.isArray(item_ids) ? item_ids : [item_ids];
+        const isAvailable = available === 'true' ? 1 : 0;
+        try {
+            for (const id of ids) {
+                await pool.query('UPDATE items SET available = ? WHERE id = ?', [isAvailable, id]);
+            }
+            res.redirect('/dashboard');
+        } catch {
+            res.status(500).send('Erro ao atualizar disponibilidade.');
+        }
+    });
+
     app.post('/add-item', async (req, res) => {
         const { name, category } = req.body;
         if (!name || name.trim() === '') {
@@ -78,6 +95,55 @@ function createApp(pool) {
             res.redirect('/dashboard');
         } catch {
             res.status(500).send('Erro ao registrar pedido.');
+        }
+    });
+
+    app.post('/orders/advance', async (req, res) => {
+        const { order_id, delivered_to } = req.body;
+        if (!order_id) {
+            return res.status(400).json({ success: false, message: 'ID do pedido inválido.' });
+        }
+        const progression = { 'Aberto': 'Cozinha', 'Cozinha': 'Entrega', 'Entrega': 'Entregue' };
+        try {
+            const [[order]] = await pool.query('SELECT status FROM orders WHERE id = ?', [order_id]);
+            if (!order) return res.status(404).json({ success: false, message: 'Pedido não encontrado.' });
+            const nextStatus = progression[order.status];
+            if (!nextStatus) return res.status(400).json({ success: false, message: 'Pedido já finalizado.' });
+            if (nextStatus === 'Entregue') {
+                if (!delivered_to) return res.status(400).json({ success: false, message: 'Informe para quem foi entregue.' });
+                await pool.query(
+                    'UPDATE orders SET status = ?, delivered_to = ?, delivered_at = NOW() WHERE id = ?',
+                    [nextStatus, delivered_to, order_id]
+                );
+            } else {
+                await pool.query('UPDATE orders SET status = ? WHERE id = ?', [nextStatus, order_id]);
+            }
+            res.json({ success: true, nextStatus });
+        } catch {
+            res.status(500).json({ success: false, message: 'Erro ao avançar pedido.' });
+        }
+    });
+
+    app.get('/kanban', async (req, res) => {
+        try {
+            const statuses = ['Aberto', 'Cozinha', 'Entrega', 'Entregue'];
+            const columns = {};
+            for (const status of statuses) {
+                const [rows] = await pool.query(
+                    `SELECT o.id, o.customer_name, o.size, o.delivered_to, o.delivered_at,
+                     GROUP_CONCAT(i.name ORDER BY i.name SEPARATOR ', ') AS itens
+                     FROM orders o
+                     LEFT JOIN order_items oi ON o.id = oi.order_id
+                     LEFT JOIN items i ON oi.item_id = i.id
+                     WHERE o.status = ?
+                     GROUP BY o.id ORDER BY o.id DESC`,
+                    [status]
+                );
+                columns[status] = rows;
+            }
+            res.render('kanban', { columns });
+        } catch {
+            res.status(500).send('Erro ao carregar kanban.');
         }
     });
 

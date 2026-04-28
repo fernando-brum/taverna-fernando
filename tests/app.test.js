@@ -173,3 +173,100 @@ test('POST /orders/deliver com erro no banco retorna 500', async () => {
     assert.equal(res.status, 500);
     assert.equal(JSON.parse(res.body).success, false);
 });
+
+// ── /orders/advance ──
+
+function makeStatusPool(status) {
+    return {
+        query: async (sql) => {
+            if (sql.includes('SELECT')) return [[{ status }]];
+            return [{ affectedRows: 1 }];
+        }
+    };
+}
+
+test('POST /orders/advance sem order_id retorna 400', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/orders/advance' });
+    assert.equal(res.status, 400);
+    assert.equal(JSON.parse(res.body).success, false);
+});
+
+test('POST /orders/advance com pedido inexistente retorna 404', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/orders/advance' }, { order_id: '99' });
+    assert.equal(res.status, 404);
+    assert.equal(JSON.parse(res.body).success, false);
+});
+
+test('POST /orders/advance Aberto para Cozinha retorna success e nextStatus', async () => {
+    const res = await request(createApp(makeStatusPool('Aberto')), { method: 'POST', path: '/orders/advance' }, { order_id: '1' });
+    assert.equal(res.status, 200);
+    const body = JSON.parse(res.body);
+    assert.equal(body.success, true);
+    assert.equal(body.nextStatus, 'Cozinha');
+});
+
+test('POST /orders/advance Cozinha para Entrega retorna success', async () => {
+    const res = await request(createApp(makeStatusPool('Cozinha')), { method: 'POST', path: '/orders/advance' }, { order_id: '1' });
+    assert.equal(res.status, 200);
+    assert.equal(JSON.parse(res.body).nextStatus, 'Entrega');
+});
+
+test('POST /orders/advance Entrega para Entregue sem delivered_to retorna 400', async () => {
+    const res = await request(createApp(makeStatusPool('Entrega')), { method: 'POST', path: '/orders/advance' }, { order_id: '1' });
+    assert.equal(res.status, 400);
+    assert.equal(JSON.parse(res.body).success, false);
+});
+
+test('POST /orders/advance Entrega para Entregue com delivered_to retorna success', async () => {
+    const res = await request(createApp(makeStatusPool('Entrega')), { method: 'POST', path: '/orders/advance' }, { order_id: '1', delivered_to: 'Cliente' });
+    assert.equal(res.status, 200);
+    assert.equal(JSON.parse(res.body).nextStatus, 'Entregue');
+});
+
+test('POST /orders/advance pedido ja entregue retorna 400', async () => {
+    const res = await request(createApp(makeStatusPool('Entregue')), { method: 'POST', path: '/orders/advance' }, { order_id: '1' });
+    assert.equal(res.status, 400);
+    assert.equal(JSON.parse(res.body).success, false);
+});
+
+test('POST /orders/advance com erro no banco retorna 500', async () => {
+    const res = await request(createApp(errorPool), { method: 'POST', path: '/orders/advance' }, { order_id: '1' });
+    assert.equal(res.status, 500);
+    assert.equal(JSON.parse(res.body).success, false);
+});
+
+// ── /items/status ──
+
+test('POST /items/status sem item_ids retorna 400', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/items/status' }, { available: 'false' });
+    assert.equal(res.status, 400);
+});
+
+test('POST /items/status marcar em falta redireciona para /dashboard', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/items/status' }, { item_ids: '1', available: 'false' });
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.location, '/dashboard');
+});
+
+test('POST /items/status marcar disponivel redireciona para /dashboard', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/items/status' }, { item_ids: ['1', '2'], available: 'true' });
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.location, '/dashboard');
+});
+
+test('POST /items/status com erro no banco retorna 500', async () => {
+    const res = await request(createApp(errorPool), { method: 'POST', path: '/items/status' }, { item_ids: '1', available: 'false' });
+    assert.equal(res.status, 500);
+});
+
+// ── /kanban ──
+
+test('GET /kanban retorna 200', async () => {
+    const res = await request(createApp(emptyPool), { path: '/kanban' });
+    assert.equal(res.status, 200);
+});
+
+test('GET /kanban com erro no banco retorna 500', async () => {
+    const res = await request(createApp(errorPool), { path: '/kanban' });
+    assert.equal(res.status, 500);
+});
