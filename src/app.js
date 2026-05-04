@@ -50,7 +50,8 @@ function createApp(pool) {
             for (const id of ids) {
                 await pool.query('UPDATE items SET available = ? WHERE id = ?', [isAvailable, id]);
             }
-            res.redirect('/dashboard');
+            const label = isAvailable ? 'Ingrediente(s) marcado(s) como Disponível' : 'Ingrediente(s) marcado(s) como Em Falta';
+            res.redirect(`/dashboard?msg=${encodeURIComponent(label)}&type=success`);
         } catch {
             res.status(500).send('Erro ao atualizar disponibilidade.');
         }
@@ -63,7 +64,7 @@ function createApp(pool) {
         }
         try {
             await pool.query('INSERT INTO items (name, category) VALUES (?, ?)', [name.trim(), category ? category.trim() : null]);
-            res.redirect('/dashboard');
+            res.redirect('/dashboard?msg=Ingrediente+cadastrado+com+sucesso&type=success');
         } catch {
             res.status(500).send('Erro ao cadastrar item.');
         }
@@ -92,7 +93,7 @@ function createApp(pool) {
                     );
                 }
             }
-            res.redirect('/dashboard');
+            res.redirect('/dashboard?msg=Pedido+registrado+com+sucesso&type=success');
         } catch {
             res.status(500).send('Erro ao registrar pedido.');
         }
@@ -187,7 +188,8 @@ function createApp(pool) {
                  WHERE o.status = 'Entregue'
                  GROUP BY o.id ORDER BY o.delivered_at DESC`
             );
-            res.render('dashboard', { items, orders, delivered });
+            const { msg, type } = req.query;
+            res.render('dashboard', { items, orders, delivered, toastMsg: msg || null, toastType: type || null });
         } catch {
             res.status(500).send('Erro ao carregar dashboard.');
         }

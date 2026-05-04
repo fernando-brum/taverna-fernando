@@ -98,6 +98,7 @@
             padding: 14px 16px; flex-shrink: 0;
             display: flex; align-items: center; gap: 10px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer; user-select: none;
         }
         .col-icon { font-size: 18px; }
         .col-title { font-size: 14px; font-weight: 700; flex: 1; letter-spacing: 0.3px; }
@@ -106,6 +107,17 @@
             border-radius: 20px; background: rgba(0,0,0,0.25);
             border: 1px solid rgba(255,255,255,0.15);
         }
+        .col-toggle {
+            background: none; border: none; cursor: pointer; padding: 4px 6px;
+            color: rgba(255,255,255,0.45); border-radius: 8px; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .col-toggle:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .col-toggle .chevron {
+            display: inline-block; font-size: 11px; line-height: 1;
+            transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        .kanban-col.collapsed .col-toggle .chevron { transform: rotate(-90deg); }
 
         /* Cores por status */
         .col-aberto   { background: linear-gradient(135deg, rgba(0,160,220,0.3), rgba(0,100,180,0.15)); }
@@ -120,11 +132,20 @@
 
         /* ── Cards dentro da coluna ── */
         .cards {
-            flex: 1; overflow-y: auto; padding: 10px 10px 10px;
+            flex: 1; overflow-y: auto; padding: 10px;
             display: flex; flex-direction: column; gap: 10px;
+            max-height: 800px;
+            transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1),
+                        opacity 0.25s ease,
+                        padding 0.3s ease;
         }
         .cards::-webkit-scrollbar { width: 4px; }
         .cards::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+        .kanban-col.collapsed .cards {
+            max-height: 0; opacity: 0;
+            padding-top: 0; padding-bottom: 0;
+            overflow: hidden;
+        }
 
         .empty-col {
             text-align: center; padding: 32px 12px;
@@ -274,6 +295,32 @@
         .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
         .toast.success { background:rgba(0,180,100,0.9); color:#fff; }
         .toast.error   { background:rgba(200,40,40,0.9);  color:#fff; }
+
+        /* ── Responsividade mobile (375px) ── */
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .content { height: auto; min-height: 100vh; }
+            .header { padding: 12px 16px; margin-bottom: 14px; }
+            .header h1 { font-size: 15px; }
+            .header-left { gap: 8px; flex-wrap: wrap; }
+            .logo { height: 36px; }
+            .nav-dash { font-size: 12px; padding: 6px 12px; }
+
+            /* Colunas empilham verticalmente */
+            .kanban-board {
+                flex-direction: column;
+                overflow-x: hidden;
+                overflow-y: visible;
+                height: auto;
+                gap: 12px;
+            }
+            .kanban-col { flex: none; width: 100%; }
+            .cards { max-height: 420px; }
+            .kanban-col.collapsed .cards { max-height: 0; }
+
+            .kcard { padding: 12px; }
+            .modal-box { width: calc(100vw - 32px); padding: 22px 18px; }
+        }
     </style>
 </head>
 <body>
@@ -310,10 +357,13 @@
             %>
             <div class="kanban-col" data-status="<%= status %>">
 
-                <div class="col-header <%= cfg.cls %>">
+                <div class="col-header <%= cfg.cls %>" onclick="toggleCol(this)">
                     <span class="col-icon"><%= cfg.icon %></span>
                     <span class="col-title"><%= status %></span>
                     <span class="col-count"><%= orders.length %></span>
+                    <button class="col-toggle" title="Recolher/Expandir" onclick="event.stopPropagation();toggleCol(this.closest('.col-header'))">
+                        <span class="chevron">▼</span>
+                    </button>
                 </div>
 
                 <div class="cards" id="col-<%= status.toLowerCase() %>">
@@ -510,6 +560,14 @@
                 const count = col.querySelectorAll('.kcard').length;
                 col.querySelector('.col-count').textContent = count;
             });
+        }
+
+        // ── Recolher/expandir coluna ──
+        function toggleCol(header) {
+            const col = header.closest('.kanban-col');
+            col.classList.toggle('collapsed');
+            const chevron = header.querySelector('.chevron');
+            if (chevron) chevron.textContent = col.classList.contains('collapsed') ? '▶' : '▼';
         }
     </script>
 </body>

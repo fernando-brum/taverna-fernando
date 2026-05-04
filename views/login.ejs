@@ -317,6 +317,12 @@
             90%  { opacity: 0.6; }
             100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
         }
+
+        /* ── Responsividade mobile (375px) ── */
+        @media (max-width: 440px) {
+            .glass-card { width: calc(100vw - 32px); padding: 32px 20px 24px; }
+            .title { font-size: 20px; }
+        }
     </style>
 </head>
 <body>

@@ -393,6 +393,22 @@
         .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
         .toast.success { background:rgba(0,160,90,0.88); color:#fff; }
         .toast.error   { background:rgba(200,40,40,0.88); color:#fff; }
+
+        /* ── Responsividade mobile (375px) ── */
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 16px; }
+            .header > div { flex-wrap: wrap; gap: 8px; }
+            .header h1 { font-size: 15px; }
+            .logo { height: 40px; }
+            .grid { flex-direction: column; }
+            .card { min-width: unset; width: 100%; }
+            .section-header { flex-wrap: wrap; gap: 8px; }
+            .btn-concluir-sel { width: 100%; }
+            .orders-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { min-width: 480px; }
+            .nav-kanban { font-size: 12px; padding: 6px 12px; }
+        }
     </style>
 </head>
 <body>
@@ -683,6 +699,11 @@
             const ids = [...checkboxes].filter(c => c.checked).map(c => c.value);
             if (ids.length > 0) openModal(ids);
         });
+
+        // ── Auto-toast após redirect com query params ──
+        <% if (toastMsg) { %>
+        showToast('<%= toastMsg %>', '<%= toastType %>');
+        <% } %>
     </script>
 </body>
 </html>

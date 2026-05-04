@@ -98,7 +98,7 @@ test('POST /add-item com nome apenas espacos retorna 400', async () => {
 test('POST /add-item com dados validos redireciona para /dashboard', async () => {
     const res = await request(createApp(emptyPool), { method: 'POST', path: '/add-item' }, { name: 'Arroz', category: 'Base' });
     assert.equal(res.status, 302);
-    assert.equal(res.headers.location, '/dashboard');
+    assert.ok(res.headers.location.startsWith('/dashboard'));
 });
 
 test('POST /add-item com erro no banco retorna 500', async () => {
@@ -120,7 +120,7 @@ test('POST /orders com dados validos redireciona para /dashboard', async () => {
     const orderPool = { query: async () => [{ insertId: 1 }] };
     const res = await request(createApp(orderPool), { method: 'POST', path: '/orders' }, { customer_name: 'Joao', size: 'Media 500g', item_ids: ['1', '2'] });
     assert.equal(res.status, 302);
-    assert.equal(res.headers.location, '/dashboard');
+    assert.ok(res.headers.location.startsWith('/dashboard'));
 });
 
 test('POST /orders sem item_ids redireciona para /dashboard', async () => {
@@ -245,13 +245,13 @@ test('POST /items/status sem item_ids retorna 400', async () => {
 test('POST /items/status marcar em falta redireciona para /dashboard', async () => {
     const res = await request(createApp(emptyPool), { method: 'POST', path: '/items/status' }, { item_ids: '1', available: 'false' });
     assert.equal(res.status, 302);
-    assert.equal(res.headers.location, '/dashboard');
+    assert.ok(res.headers.location.startsWith('/dashboard'));
 });
 
 test('POST /items/status marcar disponivel redireciona para /dashboard', async () => {
     const res = await request(createApp(emptyPool), { method: 'POST', path: '/items/status' }, { item_ids: ['1', '2'], available: 'true' });
     assert.equal(res.status, 302);
-    assert.equal(res.headers.location, '/dashboard');
+    assert.ok(res.headers.location.startsWith('/dashboard'));
 });
 
 test('POST /items/status com erro no banco retorna 500', async () => {
