@@ -55,7 +55,40 @@
             border-radius: 20px;
             backdrop-filter: blur(20px);
             box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+            position: relative; z-index: 20;
         }
+
+        /* ── Dropdown Exportar ── */
+        .export-wrap { position:relative; display:inline-block; }
+        .btn-export {
+            display:inline-flex; align-items:center; gap:6px; padding:7px 14px;
+            border-radius:12px; font-size:13px; font-weight:600; cursor:pointer;
+            background:linear-gradient(135deg,rgba(42,245,176,0.2),rgba(0,180,120,0.1));
+            border:1px solid rgba(42,245,176,0.35); color:#7ae8c8;
+            transition:all 0.2s; box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);
+            user-select:none;
+        }
+        .btn-export:hover { background:linear-gradient(135deg,rgba(42,245,176,0.3),rgba(0,180,120,0.2)); color:#fff; transform:translateY(-1px); }
+        .btn-export .chevron { font-size:10px; transition:transform 0.2s; }
+        .btn-export.open .chevron { transform:rotate(180deg); }
+        .export-menu {
+            display:none; position:absolute; top:calc(100% + 8px); right:0;
+            min-width:168px; z-index:60;
+            background:linear-gradient(160deg,rgba(10,28,50,0.97),rgba(4,20,36,0.98));
+            border:1px solid rgba(42,245,176,0.25); border-radius:14px;
+            backdrop-filter:blur(20px);
+            box-shadow:0 12px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1);
+            overflow:hidden; animation:menuIn 0.18s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        @keyframes menuIn { from{opacity:0;transform:translateY(-6px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+        .export-menu.open { display:block; }
+        .export-option {
+            display:flex; align-items:center; gap:10px; padding:11px 16px;
+            color:rgba(255,255,255,0.75); text-decoration:none;
+            font-size:13px; font-weight:500; transition:background 0.15s, color 0.15s;
+        }
+        .export-option:hover { background:rgba(42,245,176,0.1); color:#7ae8c8; }
+        .export-option + .export-option { border-top:1px solid rgba(255,255,255,0.07); }
         .header-left { display:flex; align-items:center; gap:16px; }
         .header h1 {
             font-size: 20px; font-weight: 700;
@@ -339,6 +372,13 @@
                 <h1>Kanban da Cozinha</h1>
                 <a href="/dashboard" class="nav-dash">← Dashboard</a>
             </div>
+            <div class="export-wrap">
+                <button class="btn-export" id="btnExportToggle">📊 Exportar <span class="chevron">▾</span></button>
+                <div class="export-menu" id="exportMenu">
+                    <a href="/admin/export" class="export-option">📄 CSV (.csv)</a>
+                    <a href="/admin/export/xlsx" class="export-option">📊 Excel (.xlsx)</a>
+                </div>
+            </div>
         </div>
 
         <!-- Board -->
@@ -418,6 +458,19 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        // ── Dropdown Exportar ──
+        const btnExportToggle = document.getElementById('btnExportToggle');
+        const exportMenu      = document.getElementById('exportMenu');
+        btnExportToggle.addEventListener('click', e => {
+            e.stopPropagation();
+            const open = exportMenu.classList.toggle('open');
+            btnExportToggle.classList.toggle('open', open);
+        });
+        document.addEventListener('click', () => {
+            exportMenu.classList.remove('open');
+            btnExportToggle.classList.remove('open');
+        });
+
         // ── Toast ──
         function showToast(msg, type) {
             const t = document.getElementById('toast');
