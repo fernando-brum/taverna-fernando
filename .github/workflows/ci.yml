@@ -1,0 +1,35 @@
+name: CI — Validação Build Docker (PR → main)
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  docker-build:
+    name: Build Docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Build da imagem Docker
+        run: docker build -t taverna-fernando:ci .
+
+  testes:
+    name: Testes unitários
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Executar testes
+        run: node --test tests/

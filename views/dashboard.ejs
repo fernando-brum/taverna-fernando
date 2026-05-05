@@ -979,6 +979,7 @@
         // ── Auto-toast após redirect com query params ──
         <% if (toastMsg) { %>
         showToast('<%= toastMsg %>', '<%= toastType %>');
+        history.replaceState(null, '', '/dashboard');
         <% } %>
     </script>
 </body>
