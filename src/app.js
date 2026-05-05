@@ -3,6 +3,17 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const { hashPassword, verifyPassword } = require('./crypto');
 
+const ALLOWED_SIZES    = new Set(['Pequena 350g', 'Media 500g', 'Grande 750g']);
+const ALLOWED_DELIVERY = new Set(['Cliente', 'ao Entregador']);
+
+function isValidId(v) {
+    return v != null && /^\d+$/.test(String(v).trim()) && parseInt(v, 10) > 0;
+}
+
+function allValidIds(arr) {
+    return arr.length > 0 && arr.every(isValidId);
+}
+
 function createApp(pool) {
     const app = express();
     app.use(bodyParser.urlencoded({ extended: true }));
@@ -17,6 +28,11 @@ function createApp(pool) {
 
     app.post('/login', async (req, res) => {
         const { username, password } = req.body;
+        if (!username || !password ||
+            typeof username !== 'string' || typeof password !== 'string' ||
+            username.trim().length === 0 || username.length > 50 || password.length > 128) {
+            return res.status(400).send('<h1>Erro 400: Credenciais inválidas.</h1><a href="/">Voltar</a>');
+        }
         try {
             const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
             if (rows.length > 0 && await verifyPassword(password, rows[0].password)) {
@@ -30,6 +46,11 @@ function createApp(pool) {
 
     app.post('/register', async (req, res) => {
         const { username, password } = req.body;
+        if (!username || !password ||
+            typeof username !== 'string' || typeof password !== 'string' ||
+            username.trim().length === 0 || username.length > 50 || password.length < 4 || password.length > 128) {
+            return res.status(400).json({ success: false, message: 'Usuário ou senha inválidos (senha: 4–128 caracteres).' });
+        }
         try {
             const hash = await hashPassword(password);
             await pool.query('INSERT INTO users (username, password) VALUES (?, ?)', [username, hash]);
@@ -45,6 +66,9 @@ function createApp(pool) {
             return res.status(400).send('<h1>Erro 400: Selecione ao menos um ingrediente.</h1><a href="/dashboard">Voltar</a>');
         }
         const ids = Array.isArray(item_ids) ? item_ids : [item_ids];
+        if (!allValidIds(ids)) {
+            return res.status(400).send('<h1>Erro 400: IDs inválidos.</h1><a href="/dashboard">Voltar</a>');
+        }
         const isAvailable = available === 'true' ? 1 : 0;
         try {
             for (const id of ids) {
@@ -62,8 +86,14 @@ function createApp(pool) {
         if (!name || name.trim() === '') {
             return res.status(400).send('<h1>Erro 400: Nome do item não pode ser vazio.</h1><a href="/dashboard">Voltar</a>');
         }
+        if (!category || category.trim() === '') {
+            return res.status(400).send('<h1>Erro 400: Categoria do item não pode ser vazia.</h1><a href="/dashboard">Voltar</a>');
+        }
+        if (name.length > 100 || category.length > 50) {
+            return res.status(400).send('<h1>Erro 400: Nome ou categoria muito longos.</h1><a href="/dashboard">Voltar</a>');
+        }
         try {
-            await pool.query('INSERT INTO items (name, category) VALUES (?, ?)', [name.trim(), category ? category.trim() : null]);
+            await pool.query('INSERT INTO items (name, category) VALUES (?, ?)', [name.trim(), category.trim()]);
             res.redirect('/dashboard?msg=Ingrediente+cadastrado+com+sucesso&type=success');
         } catch {
             res.status(500).send('Erro ao cadastrar item.');
@@ -72,7 +102,7 @@ function createApp(pool) {
 
     app.post('/items/delete', async (req, res) => {
         const { item_id } = req.body;
-        if (!item_id) return res.status(400).json({ success: false, message: 'ID inválido.' });
+        if (!isValidId(item_id)) return res.status(400).json({ success: false, message: 'ID inválido.' });
         try {
             await pool.query('DELETE FROM items WHERE id = ?', [item_id]);
             res.json({ success: true });
@@ -86,8 +116,11 @@ function createApp(pool) {
         if (!customer_name || customer_name.trim() === '') {
             return res.status(400).send('<h1>Erro 400: Nome do cliente não pode ser vazio.</h1><a href="/dashboard">Voltar</a>');
         }
-        if (!size) {
-            return res.status(400).send('<h1>Erro 400: Selecione o tamanho da marmita.</h1><a href="/dashboard">Voltar</a>');
+        if (customer_name.length > 100) {
+            return res.status(400).send('<h1>Erro 400: Nome do cliente muito longo.</h1><a href="/dashboard">Voltar</a>');
+        }
+        if (!size || !ALLOWED_SIZES.has(size)) {
+            return res.status(400).send('<h1>Erro 400: Tamanho inválido.</h1><a href="/dashboard">Voltar</a>');
         }
         try {
             const [result] = await pool.query(
@@ -97,6 +130,9 @@ function createApp(pool) {
             const orderId = result.insertId;
             if (item_ids) {
                 const ids = Array.isArray(item_ids) ? item_ids : [item_ids];
+                if (!allValidIds(ids)) {
+                    return res.status(400).send('<h1>Erro 400: IDs de ingredientes inválidos.</h1><a href="/dashboard">Voltar</a>');
+                }
                 for (const itemId of ids) {
                     await pool.query(
                         'INSERT INTO order_items (order_id, item_id) VALUES (?, ?)',
@@ -112,7 +148,7 @@ function createApp(pool) {
 
     app.post('/orders/advance', async (req, res) => {
         const { order_id, delivered_to } = req.body;
-        if (!order_id) {
+        if (!isValidId(order_id)) {
             return res.status(400).json({ success: false, message: 'ID do pedido inválido.' });
         }
         const progression = { 'Aberto': 'Cozinha', 'Cozinha': 'Entrega', 'Entrega': 'Entregue' };
@@ -122,7 +158,9 @@ function createApp(pool) {
             const nextStatus = progression[order.status];
             if (!nextStatus) return res.status(400).json({ success: false, message: 'Pedido já finalizado.' });
             if (nextStatus === 'Entregue') {
-                if (!delivered_to) return res.status(400).json({ success: false, message: 'Informe para quem foi entregue.' });
+                if (!delivered_to || !ALLOWED_DELIVERY.has(delivered_to)) {
+                    return res.status(400).json({ success: false, message: 'Valor de entrega inválido.' });
+                }
                 await pool.query(
                     'UPDATE orders SET status = ?, delivered_to = ?, delivered_at = NOW() WHERE id = ?',
                     [nextStatus, delivered_to, order_id]
@@ -164,7 +202,13 @@ function createApp(pool) {
         if (!order_ids || !delivered_to) {
             return res.status(400).json({ success: false, message: 'Dados inválidos.' });
         }
+        if (!ALLOWED_DELIVERY.has(delivered_to)) {
+            return res.status(400).json({ success: false, message: 'Valor de entrega inválido.' });
+        }
         const ids = Array.isArray(order_ids) ? order_ids : [order_ids];
+        if (!allValidIds(ids)) {
+            return res.status(400).json({ success: false, message: 'IDs de pedidos inválidos.' });
+        }
         try {
             for (const id of ids) {
                 await pool.query(
