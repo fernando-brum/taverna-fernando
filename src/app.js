@@ -350,7 +350,7 @@ function createApp(pool) {
             res.setHeader('Content-Disposition', 'attachment; filename="relatorio_vendas.xlsx"');
             await wb.xlsx.write(res);
             res.end();
-        } catch (err) {
+        } catch {
             res.status(500).send('Erro ao gerar relatório Excel.');
         }
     });
