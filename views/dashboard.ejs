@@ -55,6 +55,8 @@
             border-radius: 20px;
             backdrop-filter: blur(20px);
             box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.35);
+            position: relative;
+            z-index: 20;
         }
         .header h1 { font-size: 20px; font-weight: 600; background: linear-gradient(135deg,#fff,#a0f0d0); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
         .logo { height: 52px; filter: drop-shadow(0 2px 12px rgba(0,200,255,0.5)); }
@@ -222,6 +224,73 @@
         .btn-sm-orange:hover { filter:brightness(1.1); transform:translateY(-1px); }
         .btn-sm:active { transform:scale(0.97)!important; }
 
+        /* ── Botão deletar ingrediente ── */
+        .btn-delete-item {
+            background:none; border:none; cursor:pointer; flex-shrink:0;
+            color:rgba(255,100,100,0.45); font-size:13px; font-weight:700;
+            padding:2px 5px; border-radius:5px; line-height:1;
+            transition:color 0.2s, background 0.2s;
+        }
+        .btn-delete-item:hover { color:#ff6e6e; background:rgba(255,60,60,0.18); }
+
+        /* ── Balão de preço ── */
+        .price-balloon {
+            display:none; align-items:center; gap:8px; padding:9px 14px;
+            border-radius:10px; font-size:12px; font-weight:600;
+            margin-top:8px; margin-bottom:4px; position:relative;
+            transition:background 0.3s, border-color 0.3s, color 0.3s;
+        }
+        .price-balloon.visible { display:flex; }
+        .price-balloon.ok    { background:rgba(0,200,140,0.1);  border:1px solid rgba(0,200,140,0.25);  color:#7ae8c8; }
+        .price-balloon.warn  { background:rgba(255,160,0,0.12); border:1px solid rgba(255,160,0,0.3);   color:#ffc766; }
+        .price-balloon.up    { background:rgba(86,150,255,0.12);border:1px solid rgba(86,150,255,0.3);  color:#90c8ff; }
+        .price-balloon.block { background:rgba(220,40,40,0.14); border:1px solid rgba(255,80,80,0.4);   color:#ff9999;
+                                box-shadow:0 0 12px rgba(255,60,60,0.18), inset 0 1px 0 rgba(255,120,120,0.2); }
+        .price-balloon::before {
+            content:''; position:absolute; top:-5px; left:18px;
+            border-left:5px solid transparent; border-right:5px solid transparent;
+            border-bottom:5px solid currentColor; opacity:0.45;
+        }
+
+        /* ── Tags de valor ── */
+        .valor-tag {
+            display:inline-block; padding:3px 9px; border-radius:8px; font-size:11px; font-weight:600;
+            background:rgba(42,245,176,0.12); border:1px solid rgba(42,245,176,0.25); color:#7ae8c8;
+        }
+        .valor-tag.extra { background:rgba(255,160,0,0.12); border-color:rgba(255,160,0,0.3); color:#ffc766; }
+
+        /* ── Dropdown Exportar ── */
+        .export-wrap { position:relative; display:inline-block; }
+        .btn-export {
+            display:inline-flex; align-items:center; gap:6px; padding:8px 16px;
+            border-radius:12px; font-size:13px; font-weight:600; cursor:pointer;
+            background:linear-gradient(135deg,rgba(42,245,176,0.2),rgba(0,180,120,0.1));
+            border:1px solid rgba(42,245,176,0.35); color:#7ae8c8;
+            transition:all 0.2s; box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);
+            user-select:none;
+        }
+        .btn-export:hover { background:linear-gradient(135deg,rgba(42,245,176,0.3),rgba(0,180,120,0.2)); color:#fff; transform:translateY(-1px); }
+        .btn-export .chevron { font-size:10px; transition:transform 0.2s; }
+        .btn-export.open .chevron { transform:rotate(180deg); }
+        .export-menu {
+            display:none; position:absolute; top:calc(100% + 8px); right:0;
+            min-width:168px; z-index:60;
+            background:linear-gradient(160deg,rgba(10,28,50,0.97),rgba(4,20,36,0.98));
+            border:1px solid rgba(42,245,176,0.25); border-radius:14px;
+            backdrop-filter:blur(20px);
+            box-shadow:0 12px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1);
+            overflow:hidden; animation:menuIn 0.18s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        @keyframes menuIn { from{opacity:0;transform:translateY(-6px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+        .export-menu.open { display:block; }
+        .export-option {
+            display:flex; align-items:center; gap:10px; padding:11px 16px;
+            color:rgba(255,255,255,0.75); text-decoration:none;
+            font-size:13px; font-weight:500; transition:background 0.15s, color 0.15s;
+        }
+        .export-option:hover { background:rgba(42,245,176,0.1); color:#7ae8c8; }
+        .export-option + .export-option { border-top:1px solid rgba(255,255,255,0.07); }
+
         /* ── Seções de pedidos ── */
         .orders-section {
             background:linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04));
@@ -299,7 +368,7 @@
             background:linear-gradient(180deg,rgba(255,255,255,0.3),transparent);
         }
         .btn-concluir-sel:hover { filter:brightness(1.15); transform:translateY(-1px); }
-        .btn-concluir-sel:disabled { opacity:0.4; cursor:default; transform:none; filter:none; }
+        .btn-concluir-sel.inactive { opacity:0.4; cursor:default; transform:none !important; filter:none !important; }
 
         /* ── Modal ── */
         .modal-overlay {
@@ -421,9 +490,16 @@
 
         <!-- Header -->
         <div class="header">
-            <div style="display:flex;align-items:center;gap:16px">
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
                 <h1>Painel Administrativo — taverna-fernando</h1>
                 <a href="/kanban" class="nav-kanban">🍱 Kanban da Cozinha</a>
+                <div class="export-wrap">
+                    <button class="btn-export" id="btnExportToggle">📊 Exportar <span class="chevron">▾</span></button>
+                    <div class="export-menu" id="exportMenu">
+                        <a href="/admin/export" class="export-option">📄 CSV (.csv)</a>
+                        <a href="/admin/export/xlsx" class="export-option">📊 Excel (.xlsx)</a>
+                    </div>
+                </div>
             </div>
             <img src="/assets/MSN-ICON.png" alt="Logo" class="logo">
         </div>
@@ -433,9 +509,10 @@
 
             <div class="card">
                 <h3>➕ Novo Ingrediente</h3>
-                <form action="/add-item" method="POST">
-                    <input type="text" name="name" placeholder="Nome (Ex: Batata Doce)" required>
-                    <input type="text" name="category" placeholder="Categoria (Ex: Carboidrato)">
+                <form action="/add-item" method="POST" id="formIngrediente" novalidate>
+                    <input type="text" name="name" id="itemName" placeholder="Nome (Ex: Batata Doce)">
+                    <input type="text" name="category" id="itemCategory" placeholder="Categoria (Ex: Carboidrato)">
+                    <div class="price-balloon" id="balloonIngrediente"></div>
                     <button type="submit" class="btn btn-green">Cadastrar Item</button>
                 </form>
             </div>
@@ -472,9 +549,14 @@
                             <span class="stock-empty">Nenhum em falta.</span>
                         <% } %>
                         <% outItems.forEach(item => { %>
-                            <label>
-                                <input type="checkbox" name="item_ids" value="<%= item.id %>">
-                                <%= item.name %> <span style="opacity:0.45;font-size:10px">(<%= item.category %>)</span>
+                            <label style="justify-content:space-between">
+                                <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;overflow:hidden">
+                                    <input type="checkbox" name="item_ids" value="<%= item.id %>">
+                                    <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                        <%= item.name %> <span style="opacity:0.45;font-size:10px">(<%= item.category %>)</span>
+                                    </span>
+                                </span>
+                                <button type="button" class="btn-delete-item" data-id="<%= item.id %>" title="Deletar ingrediente">✕</button>
                             </label>
                         <% }) %>
                     </div>
@@ -484,17 +566,18 @@
 
             <div class="card">
                 <h3>🧺 Novo Pedido</h3>
-                <form action="/orders" method="POST">
-                    <input type="text" name="customer_name" placeholder="Nome do Cliente" required>
+                <form action="/orders" method="POST" id="formPedido" novalidate>
+                    <input type="text" name="customer_name" id="customerName" placeholder="Nome do Cliente">
+                    <div class="price-balloon" id="balloonClientName" style="margin-top:-4px;margin-bottom:6px"></div>
 
                     <p style="font-size:11px;opacity:0.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Tamanho:</p>
                     <div class="size-group">
                         <input type="radio" name="size" id="p" value="Pequena 350g" required>
-                        <label for="p">🥡 Pequena<br><span style="font-size:10px;opacity:0.8">350g</span></label>
+                        <label for="p">🥡 Pequena<br><span style="font-size:10px;opacity:0.8">350g · R$15 · 3 itens</span></label>
                         <input type="radio" name="size" id="m" value="Media 500g">
-                        <label for="m">🍱 Média<br><span style="font-size:10px;opacity:0.8">500g</span></label>
+                        <label for="m">🍱 Média<br><span style="font-size:10px;opacity:0.8">500g · R$20 · 4 itens</span></label>
                         <input type="radio" name="size" id="g" value="Grande 750g">
-                        <label for="g">🫙 Grande<br><span style="font-size:10px;opacity:0.8">750g</span></label>
+                        <label for="g">🫙 Grande<br><span style="font-size:10px;opacity:0.8">750g · R$25 · 5 itens</span></label>
                     </div>
 
                     <p style="font-size:11px;opacity:0.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Compor com:</p>
@@ -511,6 +594,8 @@
                         <% }) %>
                     </div>
 
+                    <div class="price-balloon" id="priceBalloon"></div>
+
                     <button type="submit" class="btn btn-green">Registrar Pedido</button>
                 </form>
             </div>
@@ -521,26 +606,44 @@
         <div class="orders-section">
             <div class="section-header">
                 <span class="section-title">📦 Pedidos Ativos</span>
-                <button class="btn-concluir-sel" id="btnConcluir" disabled>Concluir Selecionados</button>
+                <button class="btn-concluir-sel inactive" id="btnConcluir">Concluir Selecionados</button>
             </div>
-            <% if (orders.length === 0) { %>
+            <%
+            const _bp = { 'Pequena 350g': 15, 'Media 500g': 20, 'Grande 750g': 25 };
+            const _iq = { 'Pequena 350g': 3,  'Media 500g': 4,  'Grande 750g': 5  };
+            const _val = o => {
+                const base   = _bp[o.size] || 0;
+                const extras = o.size === 'Grande 750g' ? Math.max(0, (o.item_count||0) - (_iq[o.size]||0)) : 0;
+                const total  = base + extras * 3.5;
+                return { total: total.toFixed(2).replace('.',','), extras };
+            };
+        %>
+        <% if (orders.length === 0) { %>
                 <p class="empty-msg">Nenhum pedido ativo no momento.</p>
             <% } else { %>
                 <table>
                     <thead>
                         <tr>
                             <th><input type="checkbox" class="select-all" id="selectAll" title="Selecionar todos"></th>
-                            <th>#</th><th>Cliente</th><th>Tamanho</th><th>Ingredientes</th><th>Status</th>
+                            <th>#</th><th>Cliente</th><th>Tamanho</th><th>Ingredientes</th><th>Complementos</th><th>Valor</th><th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <% orders.forEach(order => { %>
+                        <% orders.forEach(order => {
+                            const v = _val(order);
+                        %>
                             <tr>
                                 <td><input type="checkbox" class="order-check" value="<%= order.id %>"></td>
                                 <td><%= order.id %></td>
                                 <td><%= order.customer_name %></td>
                                 <td><span class="size-tag"><%= order.size %></span></td>
                                 <td style="font-size:12px;opacity:0.8"><%= order.itens || '—' %></td>
+                                <td style="font-size:12px">
+                                    <% if (v.extras > 0) { %>
+                                        <span class="valor-tag extra">+<%= v.extras %> extra<%= v.extras > 1 ? 's' : '' %> · +R$ <%= (v.extras * 3.5).toFixed(2).replace('.',',') %></span>
+                                    <% } else { %><span style="opacity:0.35">—</span><% } %>
+                                </td>
+                                <td><span class="valor-tag <%= v.extras > 0 ? 'extra' : '' %>">R$ <%= v.total %></span></td>
                                 <td>
                                     <span class="badge badge-aberto" data-id="<%= order.id %>" title="Clique para concluir entrega">
                                         Aberto
@@ -564,16 +667,24 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>#</th><th>Cliente</th><th>Tamanho</th><th>Ingredientes</th><th>Entregue a</th><th>Data/Hora</th>
+                            <th>#</th><th>Cliente</th><th>Tamanho</th><th>Ingredientes</th><th>Complementos</th><th>Valor</th><th>Entregue a</th><th>Data/Hora</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <% delivered.forEach(order => { %>
+                        <% delivered.forEach(order => {
+                            const v = _val(order);
+                        %>
                             <tr>
                                 <td><%= order.id %></td>
                                 <td><%= order.customer_name %></td>
                                 <td><span class="size-tag"><%= order.size %></span></td>
                                 <td style="font-size:12px;opacity:0.8"><%= order.itens || '—' %></td>
+                                <td style="font-size:12px">
+                                    <% if (v.extras > 0) { %>
+                                        <span class="valor-tag extra">+<%= v.extras %> extra<%= v.extras > 1 ? 's' : '' %> · +R$ <%= (v.extras * 3.5).toFixed(2).replace('.',',') %></span>
+                                    <% } else { %><span style="opacity:0.35">—</span><% } %>
+                                </td>
+                                <td><span class="valor-tag <%= v.extras > 0 ? 'extra' : '' %>">R$ <%= v.total %></span></td>
                                 <td><span class="delivered-to-tag"><%= order.delivered_to %></span></td>
                                 <td style="font-size:12px;opacity:0.7">
                                     <%= new Date(order.delivered_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) %>
@@ -681,7 +792,7 @@
 
         function updateBtnState() {
             const checked = [...checkboxes].filter(c => c.checked);
-            btnConcluir.disabled = checked.length === 0;
+            btnConcluir.classList.toggle('inactive', checked.length === 0);
             if (selectAll) selectAll.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
             if (selectAll) selectAll.checked = checked.length === checkboxes.length && checkboxes.length > 0;
         }
@@ -697,8 +808,173 @@
 
         btnConcluir.addEventListener('click', () => {
             const ids = [...checkboxes].filter(c => c.checked).map(c => c.value);
-            if (ids.length > 0) openModal(ids);
+            if (ids.length === 0) {
+                showToast('⚠ Marque ao menos um pedido antes de concluir.', 'error');
+                return;
+            }
+            openModal(ids);
         });
+
+        // ── Deletar ingrediente (apenas Em Falta) ──
+        document.querySelectorAll('.btn-delete-item').forEach(btn => {
+            btn.addEventListener('click', async e => {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                try {
+                    const res = await fetch('/items/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ item_id: id })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        btn.closest('label').remove();
+                        showToast('Ingrediente removido.', 'success');
+                    } else {
+                        showToast('❌ Erro ao remover ingrediente.', 'error');
+                    }
+                } catch {
+                    showToast('❌ Erro de conexão.', 'error');
+                }
+            });
+        });
+
+        // ── Dropdown Exportar ──
+        const btnExportToggle = document.getElementById('btnExportToggle');
+        const exportMenu      = document.getElementById('exportMenu');
+        btnExportToggle.addEventListener('click', e => {
+            e.stopPropagation();
+            const open = exportMenu.classList.toggle('open');
+            btnExportToggle.classList.toggle('open', open);
+        });
+        document.addEventListener('click', () => {
+            exportMenu.classList.remove('open');
+            btnExportToggle.classList.remove('open');
+        });
+
+        // ── Validação: Novo Ingrediente ──
+        document.getElementById('formIngrediente').addEventListener('submit', e => {
+            const name     = document.getElementById('itemName').value.trim();
+            const category = document.getElementById('itemCategory').value.trim();
+            const balloon  = document.getElementById('balloonIngrediente');
+            if (!name) {
+                e.preventDefault();
+                balloon.className = 'price-balloon visible block';
+                balloon.textContent = '🚫 Informe o nome do ingrediente';
+                document.getElementById('itemName').focus();
+                return;
+            }
+            if (!category) {
+                e.preventDefault();
+                balloon.className = 'price-balloon visible block';
+                balloon.textContent = '🚫 Informe a categoria do ingrediente';
+                document.getElementById('itemCategory').focus();
+                return;
+            }
+            balloon.className = 'price-balloon';
+        });
+
+        // ── Validação: Novo Pedido — nome do cliente ──
+        document.getElementById('formPedido').addEventListener('submit', e => {
+            const name    = document.getElementById('customerName').value.trim();
+            const balloon = document.getElementById('balloonClientName');
+            if (!name) {
+                e.preventDefault();
+                balloon.className = 'price-balloon visible block';
+                balloon.textContent = '🚫 Informe o nome do cliente';
+                document.getElementById('customerName').focus();
+                return;
+            }
+            balloon.className = 'price-balloon';
+        });
+
+        // ── Balão de preço + auto-upgrade de tamanho ──
+        const _sizePrice    = { 'Pequena 350g': 15, 'Media 500g': 20, 'Grande 750g': 25 };
+        const _sizeIncluded = { 'Pequena 350g': 3,  'Media 500g': 4,  'Grande 750g': 5  };
+        const _sizeRadios   = { 'Pequena 350g': document.getElementById('p'), 'Media 500g': document.getElementById('m'), 'Grande 750g': document.getElementById('g') };
+        let _lastValidSize  = null;
+        let _blockTimer     = null;
+
+        function showBlockBalloon(msg) {
+            const balloon = document.getElementById('priceBalloon');
+            balloon.className = 'price-balloon visible block';
+            balloon.textContent = msg;
+            clearTimeout(_blockTimer);
+            _blockTimer = setTimeout(() => updatePriceBalloon(), 3000);
+        }
+
+        function updatePriceBalloon() {
+            const balloon      = document.getElementById('priceBalloon');
+            const checkedItems = document.querySelectorAll('.items-check input[type="checkbox"]:checked');
+            const count        = checkedItems.length;
+
+            let sizeEl = document.querySelector('input[name="size"]:checked');
+            if (!sizeEl && count > 0) {
+                _sizeRadios['Pequena 350g'].checked = true;
+                sizeEl = _sizeRadios['Pequena 350g'];
+            }
+            if (!sizeEl) { balloon.className = 'price-balloon'; return; }
+
+            let size     = sizeEl.value;
+            let upgraded = false;
+
+            if (size === 'Pequena 350g' && count > 3) {
+                _sizeRadios['Media 500g'].checked = true;
+                size = 'Media 500g';
+                upgraded = true;
+            }
+            if (size === 'Media 500g' && count > 4) {
+                _sizeRadios['Grande 750g'].checked = true;
+                size = 'Grande 750g';
+                upgraded = true;
+            }
+
+            _lastValidSize = size;
+
+            const base     = _sizePrice[size];
+            const included = _sizeIncluded[size];
+            const extras   = size === 'Grande 750g' ? Math.max(0, count - included) : 0;
+            const total    = (base + extras * 3.5).toFixed(2).replace('.', ',');
+
+            if (count === 0) {
+                balloon.className = 'price-balloon visible ok';
+                balloon.textContent = `R$ ${base.toFixed(2).replace('.', ',')} · nenhum ingrediente`;
+            } else if (upgraded) {
+                balloon.className = 'price-balloon visible up';
+                balloon.textContent = `⬆ Tamanho ajustado para ${size} · R$ ${total}`;
+            } else if (extras > 0) {
+                const extraVal = (extras * 3.5).toFixed(2).replace('.', ',');
+                balloon.className = 'price-balloon visible warn';
+                balloon.textContent = `⚠ ${extras} extra${extras > 1 ? 's' : ''} · +R$ ${extraVal} · Total: R$ ${total}`;
+            } else {
+                balloon.className = 'price-balloon visible ok';
+                balloon.textContent = `✓ ${count}/${included} ${count === 1 ? 'item' : 'itens'} · R$ ${total}`;
+            }
+        }
+
+        document.querySelectorAll('input[name="size"]').forEach(r => {
+            r.addEventListener('change', () => {
+                const count      = document.querySelectorAll('.items-check input[type="checkbox"]:checked').length;
+                const maxForSize = _sizeIncluded[r.value];
+                if (count > maxForSize) {
+                    // Bloqueia: reverte para o último tamanho válido
+                    if (_lastValidSize && _sizeRadios[_lastValidSize]) {
+                        _sizeRadios[_lastValidSize].checked = true;
+                    } else {
+                        r.checked = false;
+                    }
+                    const excess   = count - maxForSize;
+                    const label    = r.value.split(' ')[0]; // "Pequena" / "Media" / "Grande"
+                    showBlockBalloon(`🚫 Para ${label}, desmarque ${excess} ingrediente${excess > 1 ? 's' : ''}`);
+                    return;
+                }
+                _lastValidSize = r.value;
+                updatePriceBalloon();
+            });
+        });
+
+        document.querySelectorAll('.items-check input[type="checkbox"]').forEach(cb => cb.addEventListener('change', updatePriceBalloon));
 
         // ── Auto-toast após redirect com query params ──
         <% if (toastMsg) { %>

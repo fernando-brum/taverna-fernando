@@ -270,3 +270,70 @@ test('GET /kanban com erro no banco retorna 500', async () => {
     const res = await request(createApp(errorPool), { path: '/kanban' });
     assert.equal(res.status, 500);
 });
+
+// ── /admin/export ──
+
+// ── /items/delete ──
+
+test('POST /items/delete com id valido retorna success true', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/items/delete' }, { item_id: '1' });
+    assert.equal(res.status, 200);
+    assert.equal(JSON.parse(res.body).success, true);
+});
+
+test('POST /items/delete sem item_id retorna 400', async () => {
+    const res = await request(createApp(emptyPool), { method: 'POST', path: '/items/delete' });
+    assert.equal(res.status, 400);
+    assert.equal(JSON.parse(res.body).success, false);
+});
+
+test('POST /items/delete com erro no banco retorna 500', async () => {
+    const res = await request(createApp(errorPool), { method: 'POST', path: '/items/delete' }, { item_id: '1' });
+    assert.equal(res.status, 500);
+    assert.equal(JSON.parse(res.body).success, false);
+});
+
+test('GET /admin/export retorna CSV com cabecalho correto', async () => {
+    const exportPool = {
+        query: async () => [[
+            { id: 1, customer_name: 'Joao', size: 'Media 500g', status: 'Entregue',
+              delivered_to: 'Cliente', delivered_at: new Date('2024-01-15T14:30:00'),
+              item_count: 3, itens: 'Arroz, Feijao, Frango' }
+        ]]
+    };
+    const res = await request(createApp(exportPool), { path: '/admin/export' });
+    assert.equal(res.status, 200);
+    assert.ok(res.headers['content-type'].includes('text/csv'));
+    assert.ok(res.headers['content-disposition'].includes('relatorio_vendas.csv'));
+    assert.ok(res.body.includes('ID;Cliente;Tamanho'));
+});
+
+test('GET /admin/export com lista vazia retorna apenas cabecalho', async () => {
+    const res = await request(createApp(emptyPool), { path: '/admin/export' });
+    assert.equal(res.status, 200);
+    const lines = res.body.trim().split('\r\n');
+    assert.equal(lines.length, 1);
+});
+
+test('GET /admin/export calcula extras somente para Grande 750g', async () => {
+    const exportPool = {
+        query: async () => [[
+            { id: 1, customer_name: 'A', size: 'Grande 750g', status: 'Entregue',
+              delivered_to: 'Cliente', delivered_at: new Date(), item_count: 7, itens: 'X' },
+            { id: 2, customer_name: 'B', size: 'Media 500g', status: 'Entregue',
+              delivered_to: 'Cliente', delivered_at: new Date(), item_count: 6, itens: 'Y' }
+        ]]
+    };
+    const res = await request(createApp(exportPool), { path: '/admin/export' });
+    assert.equal(res.status, 200);
+    const lines = res.body.split('\r\n').filter(l => l);
+    const grandeRow = lines[1].split(';');
+    const mediaRow  = lines[2].split(';');
+    assert.equal(grandeRow[5], '2');
+    assert.equal(mediaRow[5],  '0');
+});
+
+test('GET /admin/export com erro no banco retorna 500', async () => {
+    const res = await request(createApp(errorPool), { path: '/admin/export' });
+    assert.equal(res.status, 500);
+});

@@ -7,7 +7,8 @@ const dbConfig = {
     port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER || 'user',
     password: process.env.DB_PASS || 'password',
-    database: process.env.DB_NAME || 'marmitadb'
+    database: process.env.DB_NAME || 'marmitadb',
+    charset: 'utf8mb4'
 };
 
 async function connectWithRetry() {
