@@ -184,7 +184,7 @@ jobs:
           fi
 
       - name: Publicar comentário de cobertura no PR
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: coverage-report
           message: |
