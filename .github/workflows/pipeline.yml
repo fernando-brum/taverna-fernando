@@ -99,14 +99,16 @@ jobs:
       - name: Instalar c8 para cobertura de código
         run: npm install --no-save c8
 
-      - name: Rodar testes com cobertura (LCOV)
-        run: npx c8 --reporter=lcov --reporter=text node --test tests/
+      - name: Rodar testes com cobertura
+        run: npx c8 --reporter=lcov --reporter=text --reporter=json-summary node --test tests/
 
       - name: Publicar relatório de cobertura
         uses: actions/upload-artifact@v7.0.1
         with:
           name: coverage-report
-          path: coverage/lcov.info
+          path: |
+            coverage/lcov.info
+            coverage/coverage-summary.json
 
   job_sonar:
     needs: estagio_test
@@ -146,3 +148,59 @@ jobs:
         with:
           args: >
             -Dsonar.branch.name=${{ github.ref_name }}
+
+  job_coverage_comment:
+    needs: estagio_test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Baixar relatório de cobertura
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Calcular percentuais de cobertura
+        id: coverage
+        run: |
+          LINES=$(node -e "const s=require('./coverage/coverage-summary.json');process.stdout.write(s.total.lines.pct.toFixed(1))")
+          FUNCTIONS=$(node -e "const s=require('./coverage/coverage-summary.json');process.stdout.write(s.total.functions.pct.toFixed(1))")
+          BRANCHES=$(node -e "const s=require('./coverage/coverage-summary.json');process.stdout.write(s.total.branches.pct.toFixed(1))")
+          STATEMENTS=$(node -e "const s=require('./coverage/coverage-summary.json');process.stdout.write(s.total.statements.pct.toFixed(1))")
+
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+          echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+
+          MIN=50
+          if (( $(echo "$LINES < $MIN" | bc -l) )); then
+            echo "below_threshold=true" >> $GITHUB_OUTPUT
+          else
+            echo "below_threshold=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publicar comentário de cobertura no PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-report
+          message: |
+            ## Relatorio de Cobertura de Testes
+
+            | Metrica    | Cobertura |
+            |------------|-----------|
+            | Linhas     | ${{ steps.coverage.outputs.lines }}% |
+            | Funcoes    | ${{ steps.coverage.outputs.functions }}% |
+            | Branches   | ${{ steps.coverage.outputs.branches }}% |
+            | Statements | ${{ steps.coverage.outputs.statements }}% |
+
+            ${{ steps.coverage.outputs.below_threshold == 'true' && '> Cobertura abaixo do limite minimo de 50%. Corrija os testes antes de fazer merge.' || '> Cobertura dentro do limite minimo (50%).' }}
+
+      - name: Bloquear merge se cobertura insuficiente
+        if: steps.coverage.outputs.below_threshold == 'true'
+        run: |
+          echo "Cobertura de testes abaixo do minimo de 50%. Merge bloqueado."
+          exit 1
