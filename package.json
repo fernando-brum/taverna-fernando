@@ -10,7 +10,7 @@
   "dependencies": {
     "express": "4.22.0",
     "mysql2": "3.9.8",
-    "ejs": "3.1.10",
+    "ejs": "5.0.2",
     "body-parser": "1.20.3",
     "exceljs": "4.4.0"
   }
