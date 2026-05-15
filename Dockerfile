@@ -1,7 +1,7 @@
 # ---------------------------------------------------
 # Estágio 1: Builder (Prepara as dependências)
 # ---------------------------------------------------
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN npm install --omit=dev --registry=https://registry.npmjs.org
 # ---------------------------------------------------
 # Estágio 2: Imagem Final (Enxuta e segura)
 # ---------------------------------------------------
-FROM node:18-alpine
+FROM node:20-alpine
 
 ENV NODE_ENV=production
 
