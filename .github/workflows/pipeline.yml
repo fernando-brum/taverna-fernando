@@ -1,12 +1,16 @@
-name: integracao continua
+name: integracao continua e staging
 
 on:
   push:
-    branches: ["develop"]
+    branches: ["develop", "staging"]
   pull_request:
     branches: ["develop"]
 
 jobs:
+  # ==========================================
+  # ETAPAS COMPARTILHADAS (develop + staging)
+  # ==========================================
+
   estagio_build:
     runs-on: ubuntu-latest
     steps:
@@ -83,9 +87,14 @@ jobs:
       - name: Rodar lint
         run: npx eslint .
 
+  # ==========================================
+  # ETAPAS DE DEVELOP
+  # ==========================================
+
   estagio_test:
     runs-on: ubuntu-latest
     needs: estagio_lint
+    if: github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -113,8 +122,8 @@ jobs:
 
   job_sonar:
     needs: estagio_test
+    if: github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -142,6 +151,133 @@ jobs:
         run: cat sonar-project.properties
 
       - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.TOKEN_SONAR }}
+          SONAR_HOST_URL: "https://devsecops.dcotech.com.br"
+        with:
+          args: >
+            -Dsonar.branch.name=${{ github.ref_name }}
+
+  # ==========================================
+  # ETAPAS DE STAGING
+  # ==========================================
+
+  job_release_docker:
+    needs: estagio_lint
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Build da imagem Docker
+        run: |
+          docker build -t fernandobdocker/taverna-fernando:staging-${{ github.sha }} .
+
+      - name: Exportar imagem como artefato
+        run: |
+          docker save fernandobdocker/taverna-fernando:staging-${{ github.sha }} -o taverna-staging.tar
+
+      - name: Upload do artefato da imagem
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: taverna-staging.tar
+          retention-days: 1
+
+  job_trivy_sonar:
+    needs: job_release_docker
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download do artefato da imagem
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Carregar imagem Docker
+        run: docker load -i taverna-staging.tar
+
+      - name: Scan de Segurança com Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: fernandobdocker/taverna-fernando:staging-${{ github.sha }}
+          format: json
+          output: trivy-results.json
+          exit-code: "0"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Converter resultado do Trivy para formato SonarQube
+        run: |
+          python3 << 'PYEOF'
+          import json
+
+          with open("trivy-results.json") as f:
+              trivy = json.load(f)
+
+          severity_map = {
+              "CRITICAL": "CRITICAL",
+              "HIGH":     "MAJOR",
+              "MEDIUM":   "MINOR",
+              "LOW":      "INFO",
+              "UNKNOWN":  "INFO",
+          }
+
+          issues = []
+          for result in trivy.get("Results", []):
+              target = result.get("Target", "unknown")
+              file_path = "package.json"
+              if target and not target.startswith("/") and "node_modules" not in target:
+                  file_path = target
+
+              for vuln in result.get("Vulnerabilities") or []:
+                  cve      = vuln.get("VulnerabilityID", "UNKNOWN")
+                  title    = vuln.get("Title") or cve
+                  pkg      = vuln.get("PkgName", "")
+                  installed = vuln.get("InstalledVersion", "")
+                  fixed    = vuln.get("FixedVersion") or "sem fix disponivel"
+                  severity = severity_map.get(vuln.get("Severity", "UNKNOWN"), "INFO")
+                  message  = f"[{cve}] {title} | Pacote: {pkg}@{installed} | Fix: {fixed}"
+
+                  issues.append({
+                      "engineId": "trivy",
+                      "ruleId": cve,
+                      "severity": severity,
+                      "type": "VULNERABILITY",
+                      "primaryLocation": {
+                          "message": message,
+                          "filePath": file_path,
+                          "textRange": {"startLine": 1},
+                      },
+                  })
+
+          with open("trivy-sonar.json", "w") as f:
+              json.dump({"issues": issues}, f, indent=2)
+
+          print(f"Convertidas {len(issues)} vulnerabilidades para o formato SonarQube")
+          PYEOF
+
+      - name: Criar sonar-project.properties
+        run: |
+          echo "sonar.projectKey=${{ github.event.repository.name }}" > sonar-project.properties
+          echo "sonar.projectName=${{ github.event.repository.name }}" >> sonar-project.properties
+          echo "sonar.branch.name=${{ github.ref_name }}" >> sonar-project.properties
+          echo "sonar.sources=." >> sonar-project.properties
+          echo "sonar.sourceEncoding=UTF-8" >> sonar-project.properties
+          echo "sonar.exclusions=node_modules/**,.git/**,.github/**,coverage/**,dist/**" >> sonar-project.properties
+          echo "sonar.externalIssuesReportPaths=trivy-sonar.json" >> sonar-project.properties
+
+      - name: Exibir configuração do Sonar
+        run: cat sonar-project.properties
+
+      - name: SonarQube Scan com resultados do Trivy
         uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.TOKEN_SONAR }}
