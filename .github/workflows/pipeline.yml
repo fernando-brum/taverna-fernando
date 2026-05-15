@@ -214,6 +214,30 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
+      - name: Exibir vulnerabilidades encontradas pelo Trivy
+        if: always()
+        run: |
+          python3 << 'PYEOF'
+          import json, sys
+          try:
+              with open("trivy-results.json") as f:
+                  trivy = json.load(f)
+          except Exception as e:
+              print(f"Erro ao ler trivy-results.json: {e}")
+              sys.exit(0)
+          total = 0
+          for result in trivy.get("Results", []):
+              vulns = result.get("Vulnerabilities") or []
+              if not vulns:
+                  continue
+              print(f"\n=== {result.get('Target')} ({result.get('Type')}) ===")
+              for v in vulns:
+                  total += 1
+                  print(f"  [{v.get('Severity')}] {v.get('VulnerabilityID')} — {v.get('PkgName')}@{v.get('InstalledVersion')} → fix: {v.get('FixedVersion') or 'N/A'}")
+                  print(f"    {v.get('Title','')}")
+          print(f"\nTotal: {total} vulnerabilidade(s) CRITICAL/HIGH com fix disponível")
+          PYEOF
+
       - name: Converter resultado do Trivy para formato SonarQube
         run: |
           python3 << 'PYEOF'
