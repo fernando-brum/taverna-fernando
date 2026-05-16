@@ -258,6 +258,12 @@ jobs:
       - name: Carregar imagem Docker
         run: docker load -i taverna-staging.tar
 
+      - name: Baixar relatório de cobertura
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
       - name: Scan de Segurança com Trivy
         uses: aquasecurity/trivy-action@master
         with:
@@ -341,6 +347,8 @@ jobs:
           echo "sonar.sourceEncoding=UTF-8" >> sonar-project.properties
           echo "sonar.exclusions=node_modules/**,.git/**,.github/**,coverage/**,dist/**" >> sonar-project.properties
           echo "sonar.sarifReportPaths=trivy-results.sarif" >> sonar-project.properties
+          echo "sonar.javascript.lcov.reportPaths=coverage/lcov.info" >> sonar-project.properties
+          echo "sonar.coverage.exclusions=index.js" >> sonar-project.properties
 
       - name: Exibir configuração do Sonar
         run: cat sonar-project.properties
