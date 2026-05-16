@@ -210,33 +210,9 @@ jobs:
           image-ref: fernandobdocker/taverna-fernando:staging-${{ github.sha }}
           format: json
           output: trivy-results.json
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
           severity: CRITICAL,HIGH
-
-      - name: Exibir vulnerabilidades encontradas pelo Trivy
-        if: always()
-        run: |
-          python3 << 'PYEOF'
-          import json, sys
-          try:
-              with open("trivy-results.json") as f:
-                  trivy = json.load(f)
-          except Exception as e:
-              print(f"Erro ao ler trivy-results.json: {e}")
-              sys.exit(0)
-          total = 0
-          for result in trivy.get("Results", []):
-              vulns = result.get("Vulnerabilities") or []
-              if not vulns:
-                  continue
-              print(f"\n=== {result.get('Target')} ({result.get('Type')}) ===")
-              for v in vulns:
-                  total += 1
-                  print(f"  [{v.get('Severity')}] {v.get('VulnerabilityID')} — {v.get('PkgName')}@{v.get('InstalledVersion')} → fix: {v.get('FixedVersion') or 'N/A'}")
-                  print(f"    {v.get('Title','')}")
-          print(f"\nTotal: {total} vulnerabilidade(s) CRITICAL/HIGH com fix disponível")
-          PYEOF
 
       - name: Converter resultado do Trivy para formato SonarQube
         run: |
@@ -288,6 +264,70 @@ jobs:
           print(f"Convertidas {len(issues)} vulnerabilidades para o formato SonarQube")
           PYEOF
 
+      - name: Configurar Quality Gate no SonarQube
+        continue-on-error: true
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request, urllib.parse, urllib.error, json, base64, sys
+
+          SONAR_URL = "https://devsecops.dcotech.com.br"
+          TOKEN     = "${{ secrets.TOKEN_SONAR }}"
+          PROJECT   = "${{ github.event.repository.name }}"
+
+          def req(path, method="GET", data=None):
+              creds = base64.b64encode(f"{TOKEN}:".encode()).decode()
+              headers = {"Authorization": f"Basic {creds}"}
+              url = f"{SONAR_URL}{path}"
+              body = urllib.parse.urlencode(data).encode() if data else None
+              if body:
+                  headers["Content-Type"] = "application/x-www-form-urlencoded"
+              r = urllib.request.Request(url, data=body, headers=headers, method=method)
+              try:
+                  with urllib.request.urlopen(r) as resp:
+                      return json.loads(resp.read()), None
+              except urllib.error.HTTPError as e:
+                  return None, f"HTTP {e.code}: {e.read().decode()}"
+
+          # 1. Busca o Quality Gate do projeto
+          gate_data, err = req(f"/api/qualitygates/get_by_project?project={PROJECT}")
+          if err:
+              print(f"[ERRO] Não foi possível buscar o Quality Gate: {err}")
+              print("O token pode não ter permissão de admin — configure o Quality Gate manualmente no SonarQube.")
+              sys.exit(0)
+
+          gate = gate_data.get("qualityGate", {})
+          gate_id   = gate.get("id")
+          gate_name = gate.get("name")
+          print(f"Quality Gate: {gate_name} (ID: {gate_id})")
+
+          # 2. Verifica condições existentes
+          details, err = req(f"/api/qualitygates/show?id={gate_id}")
+          if err:
+              print(f"[ERRO] Não foi possível listar condições: {err}")
+              sys.exit(0)
+
+          conditions = details.get("conditions", [])
+          print(f"Condições atuais: {[c.get('metric') for c in conditions]}")
+
+          # 3. Evita duplicar condição
+          if any(c.get("metric") in ("new_vulnerabilities", "vulnerabilities") for c in conditions):
+              print("Condição de vulnerabilidade já existe no Quality Gate.")
+              sys.exit(0)
+
+          # 4. Tenta adicionar condição — bloqueia se houver qualquer vulnerabilidade nova
+          result, err = req(
+              "/api/qualitygates/create_condition",
+              method="POST",
+              data={"gateId": gate_id, "metric": "new_vulnerabilities", "operator": "GT", "error": "0"}
+          )
+          if err:
+              print(f"[ERRO] Não foi possível criar condição: {err}")
+              print("Token sem permissão de admin. Configure manualmente: Quality Gate → Add Condition → new_vulnerabilities > 0")
+              sys.exit(0)
+
+          print(f"Condição adicionada com sucesso: {result}")
+          PYEOF
+
       - name: Criar sonar-project.properties
         run: |
           echo "sonar.projectKey=${{ github.event.repository.name }}" > sonar-project.properties
@@ -309,6 +349,7 @@ jobs:
         with:
           args: >
             -Dsonar.branch.name=${{ github.ref_name }}
+            -Dsonar.qualitygate.wait=true
 
   job_push_docker:
     needs: job_trivy_sonar
