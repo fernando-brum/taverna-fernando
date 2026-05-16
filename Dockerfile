@@ -16,6 +16,12 @@ FROM node:20-alpine
 
 ENV NODE_ENV=production
 
+# Remove o npm — não é necessário em produção e carrega dependências vulneráveis.
+# O app é iniciado diretamente pelo Node.js.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx
+
 USER node
 
 WORKDIR /app
@@ -30,4 +36,4 @@ RUN chmod -R a-w /app
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["node", "index.js"]
