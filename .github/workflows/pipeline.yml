@@ -208,61 +208,11 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: fernandobdocker/taverna-fernando:staging-${{ github.sha }}
-          format: json
-          output: trivy-results.json
+          format: sarif
+          output: trivy-results.sarif
           exit-code: "0"
           ignore-unfixed: true
           severity: CRITICAL,HIGH
-
-      - name: Converter resultado do Trivy para formato SonarQube
-        run: |
-          python3 << 'PYEOF'
-          import json
-
-          with open("trivy-results.json") as f:
-              trivy = json.load(f)
-
-          severity_map = {
-              "CRITICAL": "CRITICAL",
-              "HIGH":     "MAJOR",
-              "MEDIUM":   "MINOR",
-              "LOW":      "INFO",
-              "UNKNOWN":  "INFO",
-          }
-
-          issues = []
-          for result in trivy.get("Results", []):
-              target = result.get("Target", "unknown")
-              file_path = "package.json"
-              if target and not target.startswith("/") and "node_modules" not in target:
-                  file_path = target
-
-              for vuln in result.get("Vulnerabilities") or []:
-                  cve      = vuln.get("VulnerabilityID", "UNKNOWN")
-                  title    = vuln.get("Title") or cve
-                  pkg      = vuln.get("PkgName", "")
-                  installed = vuln.get("InstalledVersion", "")
-                  fixed    = vuln.get("FixedVersion") or "sem fix disponivel"
-                  severity = severity_map.get(vuln.get("Severity", "UNKNOWN"), "INFO")
-                  message  = f"[{cve}] {title} | Pacote: {pkg}@{installed} | Fix: {fixed}"
-
-                  issues.append({
-                      "engineId": "trivy",
-                      "ruleId": cve,
-                      "severity": severity,
-                      "type": "VULNERABILITY",
-                      "primaryLocation": {
-                          "message": message,
-                          "filePath": file_path,
-                          "textRange": {"startLine": 1},
-                      },
-                  })
-
-          with open("trivy-sonar.json", "w") as f:
-              json.dump({"issues": issues}, f, indent=2)
-
-          print(f"Convertidas {len(issues)} vulnerabilidades para o formato SonarQube")
-          PYEOF
 
       - name: Configurar Quality Gate no SonarQube
         continue-on-error: true
@@ -336,7 +286,7 @@ jobs:
           echo "sonar.sources=." >> sonar-project.properties
           echo "sonar.sourceEncoding=UTF-8" >> sonar-project.properties
           echo "sonar.exclusions=node_modules/**,.git/**,.github/**,coverage/**,dist/**" >> sonar-project.properties
-          echo "sonar.externalIssuesReportPaths=trivy-sonar.json" >> sonar-project.properties
+          echo "sonar.sarifReportPaths=trivy-results.sarif" >> sonar-project.properties
 
       - name: Exibir configuração do Sonar
         run: cat sonar-project.properties
