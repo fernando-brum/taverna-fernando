@@ -14,6 +14,20 @@ function encodeBody(body) {
     return params.toString();
 }
 
+function collectResponse(server, resolve, reject, opts, encoded) {
+    let data = '';
+    const req = http.request(opts, res => {
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+            server.close();
+            resolve({ status: res.statusCode, headers: res.headers, body: data });
+        });
+    });
+    req.on('error', err => { server.close(); reject(err); });
+    if (encoded) req.write(encoded);
+    req.end();
+}
+
 function request(app, options, body) {
     return new Promise((resolve, reject) => {
         const server = http.createServer(app);
@@ -31,14 +45,7 @@ function request(app, options, body) {
                 opts.headers['Content-Type'] = 'application/x-www-form-urlencoded';
                 opts.headers['Content-Length'] = Buffer.byteLength(encoded);
             }
-            const req = http.request(opts, res => {
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => { server.close(); resolve({ status: res.statusCode, headers: res.headers, body: data }); });
-            });
-            req.on('error', err => { server.close(); reject(err); });
-            if (encoded) req.write(encoded);
-            req.end();
+            collectResponse(server, resolve, reject, opts, encoded);
         });
     });
 }
