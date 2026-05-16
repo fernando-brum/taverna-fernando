@@ -1,1 +1,24 @@
-{"name":"taverna-fernando","version":"1.0.0","dependencies":{"bcrypt":"5.1.1","existing-dependency-1":"existing-version","existing-dependency-2":"existing-version"}}
+{
+  "name": "marmitatech-pro",
+  "version": "1.0.0",
+  "description": "Sistema de Gestão de Marmitas - MySQL Version",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "bcrypt": "5.1.1",
+    "body-parser": "^1.20.5",
+    "ejs": "^3.1.10",
+    "exceljs": "4.4.0",
+    "express": "^4.22.2",
+    "mysql2": "^3.22.3"
+  },
+  "overrides": {
+    "cross-spawn": ">=7.0.5",
+    "glob": ">=10.5.0",
+    "minimatch": ">=9.0.7",
+    "tar": ">=7.5.11"
+  }
+}

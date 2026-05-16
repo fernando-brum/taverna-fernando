@@ -1,0 +1,389 @@
+name: integracao continua e staging
+
+on:
+  push:
+    branches: ["develop", "staging"]
+  pull_request:
+    branches: ["develop", "main"]
+
+jobs:
+  # ==========================================
+  # ETAPAS COMPARTILHADAS (develop + staging)
+  # ==========================================
+
+  estagio_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v6.0.2
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "20"
+          package-manager-cache: false
+
+      - name: Gerar lockfile temporário
+        run: npm install --package-lock-only
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Verificar sintaxe de todos os arquivos JS
+        run: |
+          find . -type f -name "*.js" \
+            ! -path "./node_modules/*" \
+            ! -path "./.git/*" \
+            ! -path "./dist/*" \
+            -exec node --check {} \;
+
+  estagio_lint:
+    runs-on: ubuntu-latest
+    needs: estagio_build
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v6.0.2
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "20"
+          package-manager-cache: false
+
+      - name: Gerar lockfile temporário
+        run: npm install --package-lock-only
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Instalar dependências temporárias do lint
+        run: npm install --no-save eslint globals
+
+      - name: Criar configuração temporária do ESLint
+        run: |
+          cat > eslint.config.js <<'EOF'
+          const globals = require("globals");
+
+          module.exports = [
+            {
+              files: ["**/*.js"],
+              ignores: ["node_modules/**", ".git/**", "dist/**"],
+              languageOptions: {
+                ecmaVersion: 2021,
+                sourceType: "commonjs",
+                globals: {
+                  ...globals.node,
+                  ...globals.commonjs
+                }
+              },
+              rules: {
+                "no-unused-vars": "warn",
+                "no-undef": "error"
+              }
+            }
+          ];
+          EOF
+
+      - name: Rodar lint
+        run: npx eslint .
+
+  estagio_test:
+    runs-on: ubuntu-latest
+    needs: estagio_lint
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging' || github.event_name == 'pull_request'
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v6.0.2
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "20"
+          package-manager-cache: false
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Instalar c8 para cobertura de código
+        run: npm install --no-save c8
+
+      - name: Rodar testes com cobertura
+        run: npx c8 --reporter=lcov --reporter=text --reporter=json-summary node --test tests/
+
+      - name: Publicar relatório de cobertura
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: coverage-report
+          path: |
+            coverage/lcov.info
+            coverage/coverage-summary.json
+
+  job_sonar:
+    needs: estagio_test
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Baixar relatório de cobertura
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Criar sonar-project.properties dinâmico
+        run: |
+          echo "sonar.projectKey=${{ github.event.repository.name }}" > sonar-project.properties
+          echo "sonar.projectName=${{ github.event.repository.name }}" >> sonar-project.properties
+          echo "sonar.branch.name=${{ github.ref_name }}" >> sonar-project.properties
+          echo "sonar.sources=." >> sonar-project.properties
+          echo "sonar.sourceEncoding=UTF-8" >> sonar-project.properties
+          echo "sonar.exclusions=node_modules/**,.git/**,.github/**,coverage/**,dist/**,tests/**" >> sonar-project.properties
+          echo "sonar.javascript.lcov.reportPaths=coverage/lcov.info" >> sonar-project.properties
+          echo "sonar.coverage.exclusions=index.js" >> sonar-project.properties
+
+      - name: Exibir configuração do Sonar
+        run: cat sonar-project.properties
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.TOKEN_SONAR }}
+          SONAR_HOST_URL: "https://devsecops.dcotech.com.br"
+        with:
+          args: >
+            -Dsonar.branch.name=${{ github.ref_name }}
+
+  job_coverage_comment:
+    needs: estagio_test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Baixar relatório de cobertura
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Calcular percentuais de cobertura
+        id: coverage
+        run: |
+          LINES=$(node -e "const s=require('./coverage/coverage-summary.json');process.stdout.write(s.total.lines.pct.toFixed(1))")
+          FUNCTIONS=$(node -e "const s=require('./coverage/coverage-summary.json');process.stdout.write(s.total.functions.pct.toFixed(1))")
+          BRANCHES=$(node -e "const s=require('./coverage/coverage-summary.json');process.stdout.write(s.total.branches.pct.toFixed(1))")
+          STATEMENTS=$(node -e "const s=require('./coverage/coverage-summary.json');process.stdout.write(s.total.statements.pct.toFixed(1))")
+
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+          echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+
+          MIN=50
+          if (( $(echo "$LINES < $MIN" | bc -l) )); then
+            echo "below_threshold=true" >> $GITHUB_OUTPUT
+          else
+            echo "below_threshold=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publicar comentário de cobertura no PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-report
+          message: |
+            ## Relatorio de Cobertura de Testes
+
+            | Metrica    | Cobertura |
+            |------------|-----------|
+            | Linhas     | ${{ steps.coverage.outputs.lines }}% |
+            | Funcoes    | ${{ steps.coverage.outputs.functions }}% |
+            | Branches   | ${{ steps.coverage.outputs.branches }}% |
+            | Statements | ${{ steps.coverage.outputs.statements }}% |
+
+            ${{ steps.coverage.outputs.below_threshold == 'true' && '> Cobertura abaixo do limite minimo de 50%. Corrija os testes antes de fazer merge.' || '> Cobertura dentro do limite minimo (50%).' }}
+
+      - name: Bloquear merge se cobertura insuficiente
+        if: steps.coverage.outputs.below_threshold == 'true'
+        run: |
+          echo "Cobertura de testes abaixo do minimo de 50%. Merge bloqueado."
+          exit 1
+
+  # ==========================================
+  # ETAPAS DE STAGING
+  # ==========================================
+
+  job_release_docker:
+    needs: job_sonar
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Build da imagem Docker
+        run: |
+          docker build -t fernandobdocker/taverna-fernando:staging-${{ github.sha }} .
+
+      - name: Exportar imagem como artefato
+        run: |
+          docker save fernandobdocker/taverna-fernando:staging-${{ github.sha }} -o taverna-staging.tar
+
+      - name: Upload do artefato da imagem
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: taverna-staging.tar
+          retention-days: 1
+
+  job_trivy_sonar:
+    needs: job_release_docker
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download do artefato da imagem
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Carregar imagem Docker
+        run: docker load -i taverna-staging.tar
+
+      - name: Baixar relatório de cobertura
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Scan de Segurança com Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: fernandobdocker/taverna-fernando:staging-${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: "0"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Configurar Quality Gate no SonarQube
+        continue-on-error: true
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request, urllib.parse, urllib.error, json, base64, sys
+
+          SONAR_URL = "https://devsecops.dcotech.com.br"
+          TOKEN     = "${{ secrets.TOKEN_SONAR }}"
+          PROJECT   = "${{ github.event.repository.name }}"
+
+          def req(path, method="GET", data=None):
+              creds = base64.b64encode(f"{TOKEN}:".encode()).decode()
+              headers = {"Authorization": f"Basic {creds}"}
+              url = f"{SONAR_URL}{path}"
+              body = urllib.parse.urlencode(data).encode() if data else None
+              if body:
+                  headers["Content-Type"] = "application/x-www-form-urlencoded"
+              r = urllib.request.Request(url, data=body, headers=headers, method=method)
+              try:
+                  with urllib.request.urlopen(r) as resp:
+                      return json.loads(resp.read()), None
+              except urllib.error.HTTPError as e:
+                  return None, f"HTTP {e.code}: {e.read().decode()}"
+
+          # 1. Busca o Quality Gate do projeto
+          gate_data, err = req(f"/api/qualitygates/get_by_project?project={PROJECT}")
+          if err:
+              print(f"[ERRO] Não foi possível buscar o Quality Gate: {err}")
+              print("O token pode não ter permissão de admin — configure o Quality Gate manualmente no SonarQube.")
+              sys.exit(0)
+
+          gate = gate_data.get("qualityGate", {})
+          gate_id   = gate.get("id")
+          gate_name = gate.get("name")
+          print(f"Quality Gate: {gate_name} (ID: {gate_id})")
+
+          # 2. Verifica condições existentes
+          details, err = req(f"/api/qualitygates/show?id={gate_id}")
+          if err:
+              print(f"[ERRO] Não foi possível listar condições: {err}")
+              sys.exit(0)
+
+          conditions = details.get("conditions", [])
+          print(f"Condições atuais: {[c.get('metric') for c in conditions]}")
+
+          # 3. Evita duplicar condição
+          if any(c.get("metric") in ("new_vulnerabilities", "vulnerabilities") for c in conditions):
+              print("Condição de vulnerabilidade já existe no Quality Gate.")
+              sys.exit(0)
+
+          # 4. Tenta adicionar condição — bloqueia se houver qualquer vulnerabilidade nova
+          result, err = req(
+              "/api/qualitygates/create_condition",
+              method="POST",
+              data={"gateId": gate_id, "metric": "new_vulnerabilities", "operator": "GT", "error": "0"}
+          )
+          if err:
+              print(f"[ERRO] Não foi possível criar condição: {err}")
+              print("Token sem permissão de admin. Configure manualmente: Quality Gate → Add Condition → new_vulnerabilities > 0")
+              sys.exit(0)
+
+          print(f"Condição adicionada com sucesso: {result}")
+          PYEOF
+
+      - name: Criar sonar-project.properties
+        run: |
+          echo "sonar.projectKey=${{ github.event.repository.name }}" > sonar-project.properties
+          echo "sonar.projectName=${{ github.event.repository.name }}" >> sonar-project.properties
+          echo "sonar.branch.name=${{ github.ref_name }}" >> sonar-project.properties
+          echo "sonar.sources=." >> sonar-project.properties
+          echo "sonar.sourceEncoding=UTF-8" >> sonar-project.properties
+          echo "sonar.exclusions=node_modules/**,.git/**,.github/**,coverage/**,dist/**,tests/**" >> sonar-project.properties
+          echo "sonar.sarifReportPaths=trivy-results.sarif" >> sonar-project.properties
+          echo "sonar.javascript.lcov.reportPaths=coverage/lcov.info" >> sonar-project.properties
+          echo "sonar.coverage.exclusions=index.js" >> sonar-project.properties
+
+      - name: Exibir configuração do Sonar
+        run: cat sonar-project.properties
+
+      - name: SonarQube Scan com resultados do Trivy
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.TOKEN_SONAR }}
+          SONAR_HOST_URL: "https://devsecops.dcotech.com.br"
+        with:
+          args: >
+            -Dsonar.branch.name=${{ github.ref_name }}
+            -Dsonar.qualitygate.wait=true
+
+  job_push_docker:
+    needs: job_trivy_sonar
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download do artefato da imagem
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Carregar imagem Docker
+        run: docker load -i taverna-staging.tar
+
+      - name: Login no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Push da imagem para o Docker Hub
+        run: |
+          docker push fernandobdocker/taverna-fernando:staging-${{ github.sha }}
+          docker tag fernandobdocker/taverna-fernando:staging-${{ github.sha }} fernandobdocker/taverna-fernando:staging-latest
+          docker push fernandobdocker/taverna-fernando:staging-latest
