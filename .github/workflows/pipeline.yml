@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6
 
       - name: Configurar Node.js 20
         uses: actions/setup-node@v6.4.0
@@ -42,7 +42,7 @@ jobs:
     needs: estagio_build
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6
 
       - name: Configurar Node.js 20
         uses: actions/setup-node@v6.4.0
@@ -93,7 +93,7 @@ jobs:
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging' || github.event_name == 'pull_request'
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6
 
       - name: Configurar Node.js 20
         uses: actions/setup-node@v6.4.0
@@ -124,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build da imagem Docker
         run: |
@@ -246,7 +246,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
